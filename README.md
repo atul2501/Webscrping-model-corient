@@ -5,6 +5,44 @@ retail sources, matches the same product/variant across them, extracts price
 and offer data, computes EMI scenarios, and returns a ranked "best deal"
 comparison — built to the spec in `Ecommerce_Price_Intelligence_Technical_Test.pdf`.
 
+## What does this project actually do? (explained with zero jargon)
+
+Say you want to buy a phone. Normally you'd open Croma, then Vijay Sales,
+then Reliance Digital, search the same phone on each one, write down the
+price from each, and do the math on EMI yourself. That's slow and annoying.
+
+This project is a small robot that does that whole chore for you in a few
+seconds:
+
+1. **You type a phone name** into one search box (e.g. "iPhone 16").
+2. The robot **visits several shopping sites at once** (like sending three
+   friends to three different shops at the same time) and reads off each
+   one's price, discount, and stock status.
+3. Every shop writes the same phone's name slightly differently — one says
+   `"Apple iPhone 16 (128GB) - Black"`, another says
+   `"iPhone 16 128GB Black"`. The robot **works out these are the same
+   phone** and groups them together instead of showing them as unrelated
+   products.
+4. It calculates **EMI** (the monthly installment amount if you buy on a
+   loan) using the same maths a bank would use.
+5. It **sorts everything by price** and tells you, in plain language, which
+   shop has the best deal and why.
+6. You see one clean table: phone, price at each shop, EMI, and a
+   "best deal" pick — instead of five browser tabs.
+
+Three things make this genuinely hard to get right, and this project deals
+with all three explicitly (details further down):
+- Shopping sites change their page layout, and some (Croma) actively try to
+  block robots — the app has to keep working even when one source fails.
+- The same phone is *written* differently on every site — the app has to be
+  smart enough to recognize it's still the same phone.
+- A phone search shouldn't accidentally show you a smartwatch or a pair of
+  earbuds just because the site's own search engine is a bit loose — the
+  app filters those out.
+
+Everything below this point is the technical documentation — how it's built,
+why each decision was made, and how to run it.
+
 ## Contents
 
 - [Quick start](#quick-start)
@@ -47,7 +85,7 @@ pip install -r requirements-dev.txt
 pytest -v
 ```
 
-All 61 tests run fully offline (mocked HTTP via `responses`, in-memory
+All 68 tests run fully offline (mocked HTTP via `responses`, in-memory
 SQLite) — no network access or live retailer availability required. Several
 of them replay **real HTML/JSON captured live from the target sites while
 building this** (see `tests/fixtures/`), not synthetic markup.
@@ -156,6 +194,14 @@ else changes — `search_service.py` only ever talks to the registry.
   WAL mode with a `busy_timeout` as defense-in-depth for whatever brief
   overlap remains. Postgres was never affected — real MVCC handles this
   natively.
+- Structured JSON logs (`app/utils/logging.py`) carry `crawl_id`, `source`,
+  `url`, `status_code` on every fetch. `LOG_FILE` (see `.env.example`, set
+  to `process.log` for local dev) sends them to a rotating file instead of
+  the terminal — a single `/api/search` logs one line per HTTP fetch across
+  3 adapters, noisy mid-conversation in a terminal. Left unset in
+  Docker/Render (`render.yaml` doesn't set it), which need stdout instead:
+  Render's log viewer reads container stdout, and a file inside that
+  ephemeral container would vanish on redeploy.
 
 ## Source adapters — what's real, what's not, and why
 
@@ -197,6 +243,13 @@ which is also a strict improvement over the spec's given category URL: it's
 a full-text product search, so it isn't limited to the iPhone-only listing
 page and works for any brand/model. This is the spec's own optional bullet,
 *"Direct API/network-data extraction where appropriate and permitted."*
+Because it's a full-text search, a query can also match things that aren't
+phones at all — a smartwatch, earbuds, a "Smartphone Printer" — that a
+name-keyword blocklist alone can't fully anticipate; this was caught during
+live testing with a brand-only query. The GraphQL query also asks for each
+item's own site category (`categories { url_key }`), and `search()` keeps
+only items tagged `"smartphones"` there — an authoritative signal from the
+site itself, not a name guess.
 Bank-offer text isn't in that API's schema, and the spec's given bank-offers
 URL 404s today (the site moved that content into an on-page popup component
 since the spec was written) — so as a bounded, best-effort enrichment, the
@@ -273,16 +326,25 @@ control bypass the spec says not to do.
 ## Product matching
 
 `app/matching/normalizer.py` turns a raw, source-specific title into
-brand/model/storage/colour. It's built around the shape real listing titles
+brand/model/storage/colour. It's built around the shapes real listing titles
 actually take (verified against live Vijay Sales/Reliance Digital output):
 brand+model first, then a comma/parenthesis-delimited spec list ending in
 colour — e.g. `"Apple iPhone 17 Pro (256GB Storage, Black)"` or
-`"OPPO Reno16c 256 GB, 8 GB RAM, Stellar Purple, Mobile Phone"`. Storage and
-RAM segments are recognized and discarded, filler segments (`"Mobile
-Phone"`, `"5G"`, ...) are discarded, and the last surviving segment is taken
-as colour — rather than guessing colour out of unstructured free text, which
-is far less reliable given how varied marketing colour names are ("Cosmic
-Orange", "Ultramarine", "Stellar Purple", ...).
+`"OPPO Reno16c 256 GB, 8 GB RAM, Stellar Purple, Mobile Phone"` — or, for
+some Vijay Sales listings (Nothing Phone in particular), a **pipe**-delimited
+spec tail instead of commas, with the model number itself sitting in a
+parenthetical right after the brand: `"Nothing Phone (4a) Pro 5G (8GB RAM,
+128GB Storage) | Qualcomm Snapdragon 7 Gen 4 | 5400mAh Battery | Glyph
+Interface | Silver"`. This second shape was caught live (it was silently
+producing an empty `model` and dumping the entire spec tail into `colour`)
+and is covered by regression tests
+(`test_pipe_delimited_title_with_model_number_in_leading_parens` and
+neighbours in `tests/unit/test_normalizer.py`). Storage and RAM segments are
+recognized and discarded, filler segments (`"Mobile Phone"`, `"5G"`, ...)
+are discarded, and the last surviving segment is taken as colour — rather
+than guessing colour out of unstructured free text, which is far less
+reliable given how varied marketing colour names are ("Cosmic Orange",
+"Ultramarine", "Stellar Purple", ...).
 
 `app/matching/matcher.py` groups listings into `Variant` rows: an exact
 `variant_key` match first; if that misses (e.g. one source's model text has

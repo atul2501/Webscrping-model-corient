@@ -11,6 +11,9 @@ const colourSelect = document.getElementById("colour");
 const sourceTogglesEl = document.getElementById("source-toggles");
 const budgetMinInput = document.getElementById("budget_min");
 const budgetMaxInput = document.getElementById("budget_max");
+const budgetSliderFill = document.getElementById("budget-slider-fill");
+const budgetMinLabel = document.getElementById("budget-min-label");
+const budgetMaxLabel = document.getElementById("budget-max-label");
 const emiTenureSelect = document.getElementById("emi_tenure_months");
 const downPaymentInput = document.getElementById("down_payment");
 
@@ -63,6 +66,55 @@ function calculateEmiClientSide(financedAmount, tenureMonths, annualRatePercent,
     estimate: true,
   };
 }
+
+// --- Budget slider (Flipkart-style dual-handle range) -------------------
+//
+// Two native <input type="range"> elements stacked on the same track
+// (CSS makes everything but each thumb click-through, so both stay
+// independently draggable); this just keeps them from crossing, paints the
+// coloured fill between them, and keeps the Rs. X - Rs. Y label live.
+
+const BUDGET_MIN_GAP = 1000;
+
+function updateBudgetSliderVisual() {
+  const min = Number(budgetMinInput.value);
+  const max = Number(budgetMaxInput.value);
+  const range = Number(budgetMinInput.max) || 1;
+
+  budgetSliderFill.style.left = `${(min / range) * 100}%`;
+  budgetSliderFill.style.right = `${100 - (max / range) * 100}%`;
+
+  budgetMinLabel.textContent = money(min);
+  budgetMaxLabel.textContent = max >= range ? `${money(range)}+` : money(max);
+}
+
+// A slider sitting at its full range (min at 0, max at the top) means "no
+// budget filter" - not literally "between Rs. 0 and Rs. 5,00,000" - so
+// those edge positions are sent through as null rather than as bounds.
+function getBudgetBounds() {
+  const min = Number(budgetMinInput.value);
+  const max = Number(budgetMaxInput.value);
+  const range = Number(budgetMinInput.max) || 0;
+  return {
+    min: min > 0 ? min : null,
+    max: max < range ? max : null,
+  };
+}
+
+budgetMinInput.addEventListener("input", () => {
+  if (Number(budgetMinInput.value) > Number(budgetMaxInput.value) - BUDGET_MIN_GAP) {
+    budgetMinInput.value = Math.max(0, Number(budgetMaxInput.value) - BUDGET_MIN_GAP);
+  }
+  updateBudgetSliderVisual();
+});
+budgetMaxInput.addEventListener("input", () => {
+  const sliderTop = Number(budgetMaxInput.max);
+  if (Number(budgetMaxInput.value) < Number(budgetMinInput.value) + BUDGET_MIN_GAP) {
+    budgetMaxInput.value = Math.min(sliderTop, Number(budgetMinInput.value) + BUDGET_MIN_GAP);
+  }
+  updateBudgetSliderVisual();
+});
+updateBudgetSliderVisual();
 
 function setStatus(message, isError) {
   stopLoadingStatus();
@@ -301,8 +353,7 @@ function applyLiveFilters() {
 
   const storage = storageSelect.value;
   const colour = colourSelect.value;
-  const budgetMin = budgetMinInput.value !== "" ? Number(budgetMinInput.value) : null;
-  const budgetMax = budgetMaxInput.value !== "" ? Number(budgetMaxInput.value) : null;
+  const { min: budgetMin, max: budgetMax } = getBudgetBounds();
   const tenureMonths = Number(emiTenureSelect.value) || 12;
   const downPayment = Number(downPaymentInput.value) || 0;
   const baseRate = lastModelSearch.emi_assumptions ? lastModelSearch.emi_assumptions.annual_rate_percent : 14.0;
@@ -347,13 +398,14 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(form);
   const sources = getSelectedSources();
+  const { min: budgetMin, max: budgetMax } = getBudgetBounds();
 
   executeSearch({
     model: formData.get("model"),
     storage: formData.get("storage") || null,
     colour: formData.get("colour") || null,
-    budget_min: formData.get("budget_min") || null,
-    budget_max: formData.get("budget_max") || null,
+    budget_min: budgetMin,
+    budget_max: budgetMax,
     emi_tenure_months: Number(formData.get("emi_tenure_months")) || 12,
     down_payment: Number(formData.get("down_payment")) || 0,
     sources: sources.length ? sources : null,

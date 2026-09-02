@@ -51,6 +51,7 @@ query Search($search: String!, $pageSize: Int!) {
       sku
       url_key
       stock_status
+      categories { url_key }
       rating_summary
       review_count
       small_image { url }
@@ -113,6 +114,12 @@ class VijaySalesAdapter(BaseAdapter):
         for item in items:
             name = item.get("name") or ""
             if self._looks_like_accessory(name) or not text_matches_query(name, query.model):
+                continue
+            # The site's full-text search also matches accessories whose
+            # name/description happens to mention "phone" (Nothing Ear buds,
+            # watches, etc.) that the keyword blocklist can't anticipate -
+            # the category breadcrumb from the site itself is authoritative.
+            if item.get("categories") and not self._is_in_smartphones_category(item):
                 continue
             listings.append(self._to_listing(item))
 

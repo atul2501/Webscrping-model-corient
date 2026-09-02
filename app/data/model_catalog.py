@@ -68,7 +68,10 @@ KNOWN_MODELS = list(MODEL_SPECS.keys()) + [
     "Google Pixel 8a",
     "Xiaomi 14 Ultra", "Redmi Note 13 Pro", "Poco X6 Pro",
     "Vivo V30 Pro", "Oppo Reno 12 Pro", "Realme 12 Pro+",
-    "Nothing Phone (2a)", "Motorola Edge 50 Pro",
+    "Nothing Phone (1)", "Nothing Phone (2)", "Nothing Phone (2a)", "Nothing Phone (2a) Plus",
+    "Nothing Phone (3)", "Nothing Phone (3a)", "Nothing Phone (3a) Pro",
+    "Nothing CMF Phone 1", "Nothing CMF Phone 2 Pro",
+    "Motorola Edge 50 Pro",
 ]
 
 

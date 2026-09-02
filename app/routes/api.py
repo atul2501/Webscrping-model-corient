@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from app.data.model_catalog import get_model_options, suggest_models
 from app.extensions import db
-from app.models import Listing, Variant
+from app.models import Listing, Product, Variant
 from app.services.search_service import run_search
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -54,8 +54,28 @@ def _serialize_listing_brief(listing) -> dict:
 
 @api_bp.get("/models")
 def model_suggestions():
-    query = request.args.get("q", "")
-    return jsonify({"models": suggest_models(query)})
+    """Autocomplete suggestions for the model field: whatever has actually
+    been scraped and stored (Product.canonical_name) takes priority, topped
+    up with a small curated static list so common models still suggest
+    before any crawl has ever run. Search itself never depends on this list -
+    it's suggestions only.
+    """
+    query = request.args.get("q", "").strip()
+
+    scraped = (
+        db.session.query(Product.canonical_name)
+        .filter(Product.canonical_name.ilike(f"%{query}%"))
+        .distinct()
+        .order_by(Product.canonical_name)
+        .limit(20)
+        .all()
+    )
+    scraped_names = [row[0] for row in scraped]
+    seen = {name.lower() for name in scraped_names}
+
+    static_names = [name for name in suggest_models(query, limit=20) if name.lower() not in seen]
+
+    return jsonify({"models": (scraped_names + static_names)[:10]})
 
 
 @api_bp.get("/model-options")

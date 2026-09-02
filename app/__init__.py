@@ -15,7 +15,7 @@ def create_app(config_object=None):
     os.makedirs(app.instance_path, exist_ok=True)
     _ensure_sqlite_dir(app.config["SQLALCHEMY_DATABASE_URI"])
 
-    configure_logging(app.config.get("LOG_LEVEL", "INFO"))
+    configure_logging(app.config.get("LOG_LEVEL", "INFO"), app.config.get("LOG_FILE"))
 
     db.init_app(app)
     migrate.init_app(app, db)

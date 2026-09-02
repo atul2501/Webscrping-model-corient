@@ -35,9 +35,15 @@ class Config:
     EMI_DEFAULT_ANNUAL_RATE_PERCENT = _float("EMI_DEFAULT_ANNUAL_RATE_PERCENT", 14.0)
 
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+    # Unset (the default) means "log to stdout" - what Docker/Render want,
+    # since Render's own log viewer reads container stdout and a file
+    # written inside that ephemeral container would vanish on redeploy.
+    # .env.example sets this for local dev, where a file is more useful.
+    LOG_FILE = os.environ.get("LOG_FILE") or None
 
 
 class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SEARCH_CACHE_TTL_SECONDS = 0
+    LOG_FILE = None  # tests should never write a log file to the repo

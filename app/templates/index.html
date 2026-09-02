@@ -31,13 +31,19 @@
           <option value="">Select a model first</option>
         </select>
       </div>
-      <div class="field">
-        <label for="budget_min">Budget min (Rs.)</label>
-        <input id="budget_min" name="budget_min" type="number" min="0">
-      </div>
-      <div class="field">
-        <label for="budget_max">Budget max (Rs.)</label>
-        <input id="budget_max" name="budget_max" type="number" min="0">
+      <div class="field field-budget">
+        <label>Budget</label>
+        <div class="budget-values">
+          <span id="budget-min-label">Rs. 0</span>
+          <span class="budget-values-sep">–</span>
+          <span id="budget-max-label">Rs. 5,00,000</span>
+        </div>
+        <div class="budget-slider">
+          <div class="budget-slider-track"></div>
+          <div class="budget-slider-fill" id="budget-slider-fill"></div>
+          <input id="budget_min" name="budget_min" type="range" min="0" max="500000" step="1000" value="0">
+          <input id="budget_max" name="budget_max" type="range" min="0" max="500000" step="1000" value="500000">
+        </div>
       </div>
       <div class="field">
         <label for="emi_tenure_months">EMI Tenure (months)</label>

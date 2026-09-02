@@ -93,6 +93,79 @@ body {
 }
 .field select:disabled { color: var(--muted); background: #fafafc; cursor: not-allowed; }
 
+.field-budget { grid-column: span 2; justify-content: flex-end; }
+.budget-values {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.budget-values-sep { color: var(--muted); font-weight: 400; }
+
+.budget-slider {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+.budget-slider-track,
+.budget-slider-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+.budget-slider-track { background: var(--border-strong); }
+.budget-slider-fill { background: var(--brand); left: 0%; right: 100%; }
+
+.field input[type="range"] {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 20px;
+  background: transparent;
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+.field input[type="range"]:focus { box-shadow: none; }
+.field input[type="range"]::-webkit-slider-runnable-track { background: transparent; height: 4px; }
+.field input[type="range"]::-moz-range-track { background: transparent; height: 4px; }
+.field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--brand);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  margin-top: -6.5px;
+  transition: transform 0.1s ease;
+}
+.field input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.field input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+.field input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--brand);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+}
+
 .field-submit { justify-content: flex-end; }
 .field-submit button {
   background: var(--brand);

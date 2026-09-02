@@ -85,3 +85,32 @@ def test_unknown_brand_falls_back_gracefully():
     parsed = parse_product_name("SomeNewBrand Widget X1 (128GB Storage, Blue)")
     assert parsed.brand == "Unknown"
     assert parsed.storage_gb == 128
+
+
+def test_pipe_delimited_title_with_model_number_in_leading_parens():
+    # Real Vijay Sales title shape for Nothing Phone listings: the model
+    # number sits in a parenthetical right after the brand+product-line
+    # name (not starting the spec list), and the spec list itself is
+    # pipe-delimited rather than comma-delimited. Previously this left
+    # `model` empty and dumped the whole spec tail into `colour`.
+    parsed = parse_product_name(
+        "Nothing Phone (4a) Pro 5G (8GB RAM, 128GB Storage) | "
+        "Qualcomm Snapdragon 7 Gen 4 | 5400mAh Battery | Glyph Interface | Silver"
+    )
+    assert parsed.brand == "Nothing"
+    assert parsed.model == "4a Pro"
+    assert parsed.storage == "128GB"
+    assert parsed.colour == "Silver"
+
+
+def test_pipe_delimited_title_without_trailing_spec_list_still_gets_model():
+    parsed = parse_product_name("Nothing Phone (4a) 5G P253928")
+    assert parsed.brand == "Nothing"
+    assert parsed.model == "4a"
+
+
+def test_pipe_delimited_variants_with_different_model_suffix_differ():
+    plain = parse_product_name("Nothing Phone (4a) 5G P253928")
+    pro = parse_product_name("Nothing Phone (4a) Pro 5G P257145")
+    assert plain.model != pro.model
+    assert plain.variant_key != pro.variant_key

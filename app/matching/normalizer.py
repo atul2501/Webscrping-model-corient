@@ -128,13 +128,13 @@ def _segment_is_storage_only(segment: str) -> bool:
 
 
 def _extract_colour_segment(segments: list[str]) -> str | None:
-    """Among the spec segments after the first (brand+model) one, the last
-    segment that isn't purely storage/RAM/filler is treated as the colour -
-    matches the comma/paren-delimited shape real listing titles use.
+    """Among the spec segments after the model segment, the last segment
+    that isn't purely storage/RAM/filler is treated as the colour - matches
+    the comma/paren/pipe-delimited shape real listing titles use.
     """
 
     colour_candidate = None
-    for segment in segments[1:]:
+    for segment in segments:
         if _segment_is_ram_only(segment) or _segment_is_storage_only(segment) or _segment_is_filler_or_empty(segment):
             continue
         colour_candidate = segment
@@ -218,16 +218,35 @@ def parse_product_name(
         if hint_gb:
             storage_label, storage_gb = hint_label, hint_gb
 
-    flattened = raw_name.replace("(", ",").replace(")", "")
+    # Real listing titles delimit their spec list with commas/parens
+    # ("Apple iPhone 17 Pro (256GB Storage, Black)") or with pipes
+    # ("Nothing Phone (4a) Pro 5G (8GB RAM, 128GB Storage) | Snapdragon ... |
+    # Silver") - normalize both shapes to the same comma-segment split.
+    flattened = raw_name.replace("(", ",").replace(")", "").replace("|", ",")
     segments = [s.strip() for s in flattened.split(",") if s.strip()]
     model_segment = segments[0] if segments else raw_name
+    rest_segments = segments[1:]
 
-    colour_segment = _extract_colour_segment(segments)
-    colour = _normalize_colour(colour_hint) if colour_hint else _normalize_colour(colour_segment)
-
+    # Some product lines put part of the model number in the very next
+    # parenthetical right after the brand name, e.g. "Nothing Phone (4a)
+    # Pro 5G ..." rather than starting the spec list there. If the first
+    # segment strips down to nothing once the brand name is removed, and
+    # the next segment isn't itself a spec segment (storage/RAM), it's
+    # really a continuation of the model name, not the start of specs.
     brand, model_working = _extract_brand(model_segment)
+    while not _normalize_model_text(model_working) and rest_segments and not (
+        _segment_is_ram_only(rest_segments[0]) or _segment_is_storage_only(rest_segments[0])
+    ):
+        model_segment = f"{model_segment} {rest_segments[0]}"
+        rest_segments = rest_segments[1:]
+        brand, model_working = _extract_brand(model_segment)
+
     if brand_hint:
         brand = brand_hint
+
+    colour_segment = _extract_colour_segment(rest_segments)
+    colour = _normalize_colour(colour_hint) if colour_hint else _normalize_colour(colour_segment)
+
     # Storage can still be embedded inside the model segment itself, e.g.
     # "Reno16c 256 GB" - strip it out of the text used for the model name.
     _, _, model_working = _extract_storage(model_working)
