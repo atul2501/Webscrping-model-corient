@@ -18,7 +18,8 @@ RUN useradd --create-home appuser \
 USER appuser
 
 ENV FLASK_APP=run.py \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    FLASK_SKIP_AUTOCREATE=1
 
 EXPOSE 8000
 
