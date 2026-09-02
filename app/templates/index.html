@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E-commerce Price Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Price Intelligence</h1>
+    <p class="subtitle">Search a mobile model, compare live offers across retailers, see EMI estimates.</p>
+  </header>
+
+  <main class="container">
+    <form id="search-form" class="search-form">
+      <div class="field">
+        <label for="model">Mobile Model</label>
+        <input id="model" name="model" type="text" placeholder="e.g. iPhone 17 Pro" list="model-suggestions" autocomplete="off" required>
+        <datalist id="model-suggestions"></datalist>
+      </div>
+      <div class="field">
+        <label for="storage">Storage</label>
+        <select id="storage" name="storage" disabled>
+          <option value="">Select a model first</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="colour">Colour</label>
+        <select id="colour" name="colour" disabled>
+          <option value="">Select a model first</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="budget_min">Budget min (Rs.)</label>
+        <input id="budget_min" name="budget_min" type="number" min="0">
+      </div>
+      <div class="field">
+        <label for="budget_max">Budget max (Rs.)</label>
+        <input id="budget_max" name="budget_max" type="number" min="0">
+      </div>
+      <div class="field">
+        <label for="emi_tenure_months">EMI Tenure (months)</label>
+        <select id="emi_tenure_months" name="emi_tenure_months">
+          <option value="6">6</option>
+          <option value="12" selected>12</option>
+          <option value="18">18</option>
+          <option value="24">24</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="down_payment">Down Payment (Rs.)</label>
+        <input id="down_payment" name="down_payment" type="number" min="0" value="0">
+      </div>
+      <div class="field field-sources">
+        <label>Source filter</label>
+        <div id="source-toggles" class="source-toggles">
+          {% for source in sources %}
+          <button type="button" class="source-toggle active" data-source="{{ source }}">{{ source.replace('_', ' ').title() }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="field field-submit">
+        <button type="submit">Search</button>
+      </div>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="recommendation" class="recommendation" hidden></section>
+
+    <section class="results-wrap">
+      <table id="results-table" class="results-table" hidden>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Product / Variant</th>
+            <th>Listed Price</th>
+            <th>Offer</th>
+            <th>Effective Price</th>
+            <th>EMI</th>
+            <th>Availability</th>
+            <th>Deal score</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+      <div id="empty-state" class="empty-state" hidden>
+        <strong>No listings found</strong>
+        Try a different model, storage, or colour.
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

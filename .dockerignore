@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.git
+.env
+instance/*.db
+instance/*.db-journal
+sample_output
+tests

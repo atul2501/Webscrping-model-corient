@@ -1,0 +1,27 @@
+services:
+  - name: price-intel-web
+    type: web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: price-intel-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_APP
+        value: run.py
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SEARCH_CACHE_TTL_SECONDS
+        value: "900"
+      - key: EMI_DEFAULT_ANNUAL_RATE_PERCENT
+        value: "14.0"
+
+databases:
+  - name: price-intel-db
+    plan: free

@@ -1,0 +1,619 @@
+{
+  "crawl_id": "b1a8ea5fc4b145c9a94d211fea345d14",
+  "query": {
+    "model": "iPhone 17 Pro",
+    "storage": "256GB",
+    "colour": null,
+    "budget_min": null,
+    "budget_max": null
+  },
+  "emi_assumptions": {
+    "tenure_months": 12,
+    "down_payment": 0.0,
+    "annual_rate_percent": 14.0,
+    "note": "EMI figures are calculated estimates, not scraped facts."
+  },
+  "sources_attempted": 3,
+  "sources_succeeded": 2,
+  "sources_failed": 1,
+  "source_notes": "croma: Blocked by source (403 - access control / bot protection); reliance_digital: ok (12 listing(s)); vijay_sales: ok (19 listing(s))",
+  "scraped_at": "2026-09-02T15:24:03.896028",
+  "results": [
+    {
+      "listing_id": 1,
+      "variant_id": 1,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Silver"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro 256 GB, Silver",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-256-gb-silver-mff5yc-9388031",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741634/0/r-tT6fO_3i-AW3Kcg8zwM-Apple-iPhone-17-Pro-494741634-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 134900.0,
+      "selling_price": 128990.0,
+      "discount": 5910.0,
+      "effective_price": 128990.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11581.64,
+        "total_repayment": 138979.68,
+        "total_interest": 9989.68,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 70.9,
+      "scraped_at": "2026-09-02T15:24:03.855748"
+    },
+    {
+      "listing_id": 2,
+      "variant_id": 2,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro 256 GB, Cosmic Orange",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-256-gb-cosmic-orange-mff5yc-9388032",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741635/0/kt7sZQvJv2-zv5nKgBuLs-Apple-iPhone-17-Pro-494741635-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 134900.0,
+      "selling_price": 128990.0,
+      "discount": 5910.0,
+      "effective_price": 128990.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11581.64,
+        "total_repayment": 138979.68,
+        "total_interest": 9989.68,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 70.9,
+      "scraped_at": "2026-09-02T15:24:03.859220"
+    },
+    {
+      "listing_id": 3,
+      "variant_id": 3,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Deep Blue"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro 256 GB, Deep Blue",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-256-gb-deep-blue-mff5yc-9388030",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741636/0/7uKclwQwKn-8GM_ts62Oi-Apple-iPhone-17-Pro-494741636-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 134900.0,
+      "selling_price": 128990.0,
+      "discount": 5910.0,
+      "effective_price": 128990.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11581.64,
+        "total_repayment": 138979.68,
+        "total_interest": 9989.68,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 70.9,
+      "scraped_at": "2026-09-02T15:24:03.861412"
+    },
+    {
+      "listing_id": 13,
+      "variant_id": 2,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro (256GB Storage, Cosmic Orange) P245195",
+      "product_url": "https://www.vijaysales.com/p/P245195/apple-iphone-17-pro-256gb-storage-cosmic-orange-p245195",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/placeholder/default/vsdefault_1.png",
+      "currency": "INR",
+      "mrp": 129590.0,
+      "selling_price": 129590.0,
+      "discount": 0.0,
+      "effective_price": 129590.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11635.51,
+        "total_repayment": 139626.15,
+        "total_interest": 10036.15,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.6,
+      "scraped_at": "2026-09-02T15:24:03.881367"
+    },
+    {
+      "listing_id": 19,
+      "variant_id": 2,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro (256GB Storage, Cosmic Orange)",
+      "product_url": "https://www.vijaysales.com/p/245195/apple-iphone-17-pro-256gb-cosmic-orange",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_cosmic_orange_pdp_image_position_1__en-in_1.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 129590.0,
+      "selling_price": 129590.0,
+      "discount": 0.0,
+      "effective_price": 129590.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.5,
+      "review_count": 11,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11635.51,
+        "total_repayment": 139626.15,
+        "total_interest": 10036.15,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.6,
+      "scraped_at": "2026-09-02T15:24:03.886775"
+    },
+    {
+      "listing_id": 27,
+      "variant_id": 1,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Silver"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro (256GB Storage, Silver)",
+      "product_url": "https://www.vijaysales.com/p/245194/apple-iphone-17-pro-256gb-silver",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_silver_pdp_image_position_1__en-in_1.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 129590.0,
+      "selling_price": 129590.0,
+      "discount": 0.0,
+      "effective_price": 129590.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 7,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11635.51,
+        "total_repayment": 139626.15,
+        "total_interest": 10036.15,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.6,
+      "scraped_at": "2026-09-02T15:24:03.893395"
+    },
+    {
+      "listing_id": 28,
+      "variant_id": 3,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Deep Blue"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro (256GB Storage, Deep Blue)",
+      "product_url": "https://www.vijaysales.com/p/245196/apple-iphone-17-pro-256gb-deep-blue",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_deep_blue_pdp_image_position_1__en-in_1.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 129590.0,
+      "selling_price": 129590.0,
+      "discount": 0.0,
+      "effective_price": 129590.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.7,
+      "review_count": 3,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 11635.51,
+        "total_repayment": 139626.15,
+        "total_interest": 10036.15,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.6,
+      "scraped_at": "2026-09-02T15:24:03.893847"
+    },
+    {
+      "listing_id": 10,
+      "variant_id": 10,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Silver"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro Max 256 GB, Silver",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-max-256-gb-silver-mff2dr-9387381",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741643/0/jFbzY6Qqnl-Qi-CTY_spe-AppleiPhone17ProMax-MP-494741643-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 149900.0,
+      "selling_price": 141990.0,
+      "discount": 7910.0,
+      "effective_price": 137984.0,
+      "availability": "available",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "Best price with all applicable offers: Rs.137,984",
+          "offer_type": "other",
+          "bank": null,
+          "offer_discount": 4006.0,
+          "emi_available": false,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12389.19,
+        "total_repayment": 148670.23,
+        "total_interest": 10686.23,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 49.3,
+      "scraped_at": "2026-09-02T15:24:03.876732"
+    },
+    {
+      "listing_id": 11,
+      "variant_id": 11,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro Max 256 GB, Cosmic Orange",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-max-256-gb-cosmic-orange-mff2f0-9387382",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741644/0/ugmvagLQcr-w2UMH0w2JC-AppleiPhone17ProMax-MP-494741644-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 149900.0,
+      "selling_price": 141990.0,
+      "discount": 7910.0,
+      "effective_price": 141990.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12748.87,
+        "total_repayment": 152986.47,
+        "total_interest": 10996.47,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 19.5,
+      "scraped_at": "2026-09-02T15:24:03.878846"
+    },
+    {
+      "listing_id": 12,
+      "variant_id": 12,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Deep Blue"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 17 Pro Max 256 GB, Deep Blue",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-17-pro-max-256-gb-deep-blue-mff2k1-9387385",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494741645/0/ERxJDz7hC7-SwXxmWkVLE-AppleiPhone17ProMax-MP-494741645-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 149900.0,
+      "selling_price": 141990.0,
+      "discount": 7910.0,
+      "effective_price": 141990.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "?4K EMI Off or ?3K Full Swipe CC*",
+          "offer_type": "emi",
+          "bank": null,
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12748.87,
+        "total_repayment": 152986.47,
+        "total_interest": 10996.47,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 19.5,
+      "scraped_at": "2026-09-02T15:24:03.880560"
+    },
+    {
+      "listing_id": 23,
+      "variant_id": 12,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Deep Blue"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro Max (256GB Storage, Deep Blue)",
+      "product_url": "https://www.vijaysales.com/p/245208/apple-iphone-17-pro-max-256gb-deep-blue",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_max_deep_blue_pdp_image_position_1__en-in_2.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 143990.0,
+      "selling_price": 143990.0,
+      "discount": 0.0,
+      "effective_price": 143990.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.8,
+      "review_count": 4,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12928.45,
+        "total_repayment": 155141.36,
+        "total_interest": 11151.36,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 20.0,
+      "scraped_at": "2026-09-02T15:24:03.890960"
+    },
+    {
+      "listing_id": 25,
+      "variant_id": 11,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro Max (256GB Storage, Cosmic Orange)",
+      "product_url": "https://www.vijaysales.com/p/245207/apple-iphone-17-pro-max-256gb-cosmic-orange",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_max_cosmic_orange_pdp_image_position_1__en-in_2.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 143990.0,
+      "selling_price": 143990.0,
+      "discount": 0.0,
+      "effective_price": 143990.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 8,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12928.45,
+        "total_repayment": 155141.36,
+        "total_interest": 11151.36,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 20.0,
+      "scraped_at": "2026-09-02T15:24:03.892467"
+    },
+    {
+      "listing_id": 26,
+      "variant_id": 11,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Cosmic Orange"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro Max (256GB Storage, Cosmic Orange) P245207",
+      "product_url": "https://www.vijaysales.com/p/P245207/apple-iphone-17-pro-max-256gb-storage-cosmic-orange-p245207",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/placeholder/default/vsdefault_1.png",
+      "currency": "INR",
+      "mrp": 143990.0,
+      "selling_price": 143990.0,
+      "discount": 0.0,
+      "effective_price": 143990.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12928.45,
+        "total_repayment": 155141.36,
+        "total_interest": 11151.36,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 20.0,
+      "scraped_at": "2026-09-02T15:24:03.892937"
+    },
+    {
+      "listing_id": 31,
+      "variant_id": 10,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 17 Pro Max"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Silver"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 17 Pro Max (256GB Storage, Silver)",
+      "product_url": "https://www.vijaysales.com/p/245206/apple-iphone-17-pro-max-256gb-silver",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/i/p/iphone_17_pro_max_silver_pdp_image_position_1__en-in_2.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 143990.0,
+      "selling_price": 143990.0,
+      "discount": 0.0,
+      "effective_price": 143990.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 1,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 12928.45,
+        "total_repayment": 155141.36,
+        "total_interest": 11151.36,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 20.0,
+      "scraped_at": "2026-09-02T15:24:03.895954"
+    }
+  ],
+  "recommendation": {
+    "best_current_price": {
+      "source": "reliance_digital",
+      "amount": 128990.0
+    },
+    "best_effective_price": {
+      "source": "reliance_digital",
+      "amount": 128990.0
+    },
+    "lowest_emi": {
+      "source": "reliance_digital",
+      "monthly_emi": 11581.64,
+      "tenure_months": 12
+    },
+    "reason": "reliance_digital has the lowest effective price (Rs.128,990) after applicable offers, across 14 matched listing(s) from 2 source(s)."
+  }
+}

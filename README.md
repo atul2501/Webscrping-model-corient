@@ -1,0 +1,414 @@
+# E-commerce Price Intelligence Platform
+
+A Flask application that takes a mobile-phone query, scrapes multiple Indian
+retail sources, matches the same product/variant across them, extracts price
+and offer data, computes EMI scenarios, and returns a ranked "best deal"
+comparison — built to the spec in `Ecommerce_Price_Intelligence_Technical_Test.pdf`.
+
+## Contents
+
+- [Quick start](#quick-start)
+- [Architecture](#architecture)
+- [Source adapters — what's real, what's not, and why](#source-adapters--whats-real-whats-not-and-why)
+- [Data model](#data-model)
+- [Product matching](#product-matching)
+- [EMI and offer logic](#emi-and-offer-logic)
+- [API](#api)
+- [Full-catalogue crawl (scheduled refresh)](#full-catalogue-crawl-scheduled-refresh)
+- [Testing](#testing)
+- [Assumptions and known limitations](#assumptions-and-known-limitations)
+
+## Quick start
+
+### Local development (SQLite, zero setup)
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python run.py          # http://localhost:5000, SQLite tables auto-created
+```
+
+Optional: seed a small offline demo dataset (no network calls) so
+`/api/product`, `/api/offers` and `/api/price-history` have something to show
+before you run your first live search:
+
+```bash
+python scripts/seed_db.py
+```
+
+For production, this deploys to Render (Postgres, `Dockerfile`-based) — see
+[Deploying to Render](#deploying-to-render) below.
+
+### Run the tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+All 61 tests run fully offline (mocked HTTP via `responses`, in-memory
+SQLite) — no network access or live retailer availability required. Several
+of them replay **real HTML/JSON captured live from the target sites while
+building this** (see `tests/fixtures/`), not synthetic markup.
+
+### Try a real search
+
+```bash
+curl -X POST http://localhost:5000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"model": "iPhone 17 Pro", "storage": "256GB", "emi_tenure_months": 12, "down_payment": 20000}'
+```
+
+Or generate the committed sample output yourself:
+
+```bash
+python scripts/export_sample_output.py "iPhone 17 Pro" --storage 256GB
+# writes sample_output/comparison_iphone_17_pro.json and .csv
+```
+
+`sample_output/` also has a second, broader example (`comparison_iphone_16.*`,
+genuinely returning results from both Vijay Sales and Reliance Digital at
+once) and `sample_output/screenshots/` has the search form and a rendered
+comparison table, captured from a real run against live sources.
+
+## Deploying to Render
+
+The repo includes `render.yaml` (a Render [Blueprint](https://render.com/docs/blueprints)),
+so the whole stack — the web service plus a managed Postgres — can be
+created in one step:
+
+1. Push this repo to GitHub (`origin` is already configured).
+2. In the Render dashboard: **New +** → **Blueprint** → pick this repo. Render
+   reads `render.yaml`, provisions a free Postgres database named
+   `price-intel-db`, and a Docker web service named `price-intel-web` wired
+   to it via `DATABASE_URL` automatically.
+3. Click **Apply**. First deploy takes a few minutes (Docker build + `flask
+   db upgrade` running the Alembic migrations against the fresh database).
+4. Once live, `https://<your-service>.onrender.com/health` should return
+   `{"status": "ok", "db": "ok"}`.
+
+What makes this work, specifically:
+- `docker-entrypoint.sh` runs `flask db upgrade` before starting `gunicorn`,
+  and binds to `$PORT` (Render assigns this dynamically — a hardcoded port
+  won't get traffic routed to it).
+- `app/config.py` rewrites a `postgres://` URL to `postgresql://` — Render
+  (like Heroku) hands out the former, but SQLAlchemy 1.4+/2.0 only
+  recognizes the latter and fails on first request otherwise.
+- `render.yaml`'s `healthCheckPath: /health` is what Render polls to decide
+  the deploy is actually up.
+
+No Blueprint access, or prefer doing it by hand instead: create a Postgres
+instance and a Docker-runtime web service pointing at this repo's
+`Dockerfile` in the dashboard, then set `DATABASE_URL` on the web service to
+the Postgres instance's **Internal Connection String** and `SECRET_KEY` to
+any random value — everything else has a sensible default (see
+`.env.example`).
+
+## Architecture
+
+```
+app/
+  scrapers/     BaseAdapter contract + one adapter per retailer + a registry
+  matching/     raw title -> canonical brand/model/storage/colour, and
+                grouping listings into Product/Variant rows
+  pricing/      EMI math and deal-score, kept separate from scraped facts
+  services/     search_service.py orchestrates: cache check -> dispatch
+                adapters concurrently -> persist -> match -> price/EMI ->
+                rank; cache.py is the short-TTL DB-backed search cache
+  routes/       views.py (UI, /health), api.py (/api/*)
+  models.py     Product, Variant, Listing (append-only), Offer, CrawlRun,
+                SearchCache
+```
+
+Adding a retailer = one new file in `app/scrapers/` implementing
+`BaseAdapter.search()`, plus one line in `app/scrapers/registry.py`. Nothing
+else changes — `search_service.py` only ever talks to the registry.
+
+**Reliability, by construction:**
+- `BaseAdapter.run()` catches every exception a `search()` implementation can
+  raise and converts it to `AdapterResult(ok=False, error=...)` — a source
+  failing never takes down `/api/search`; the response always carries
+  whichever sources did succeed, plus `source_notes` explaining what failed
+  and why.
+- HTTP fetches go through a shared `requests.Session` with `urllib3.Retry`
+  (backoff on `429`/`5xx` only — **not** `403`, see below), per-domain
+  minimum-interval rate limiting, and a configurable timeout.
+- `app/utils/robots.py` checks `robots.txt` (via `urllib.robotparser`) before
+  every fetch; if it can't be read, access is denied by default rather than
+  assumed open.
+- Adapters run concurrently via a bounded `ThreadPoolExecutor`
+  (`SCRAPE_MAX_WORKERS`, default 3).
+- A DB-backed cache (`SEARCH_CACHE_TTL_SECONDS`, default 900s) means an
+  identical repeated search reuses the last crawl instead of re-scraping.
+- Every scraped row keeps its source, `crawl_id` and `scraped_at`; `Listing`
+  is append-only, so price history is just a query over past rows for a
+  variant — no separate history table or background job needed to have it.
+- **Concurrent searches on SQLite are handled deliberately, not accidentally.**
+  The dev server runs threaded (the UI fires an instant catalog lookup
+  alongside a live search), and the first version of `_run_crawl` opened a
+  DB write transaction *before* dispatching the scrape and only committed
+  after it finished — so on SQLite, two overlapping searches reliably hit
+  `database is locked`, confirmed with real concurrent requests during
+  development. Fixed at the source: `crawl_id` is generated in Python up
+  front, all DB writes (the `CrawlRun` row, every `Listing`/`Offer`) happen
+  in one short transaction *after* scraping completes, and SQLite runs in
+  WAL mode with a `busy_timeout` as defense-in-depth for whatever brief
+  overlap remains. Postgres was never affected — real MVCC handles this
+  natively.
+
+## Source adapters — what's real, what's not, and why
+
+Before writing selectors, I made a handful of **live, `robots.txt`-respecting,
+single-shot research requests** against the three sources the spec
+recommends (Croma, Vijay Sales, Reliance Digital), to ground the adapters in
+what those pages actually do rather than guessing. That produced three quite
+different, and quite real, engineering situations:
+
+### Croma — blocked by bot-management infrastructure, not by robots.txt
+
+Direct requests to `croma.com` — the homepage, `/robots.txt` itself, and the
+target iPhone listing page — all returned **HTTP 403 "Access Denied"** from
+Akamai's edge WAF (see `tests/fixtures/croma_403.html`, the real captured
+response body). That's an access-control decision by bot-management
+infrastructure, not a `robots.txt` rule. The spec is explicit: *"Respect
+robots.txt, site terms, rate limits, and access controls. Do not bypass
+CAPTCHA or authentication barriers."* — so `app/scrapers/croma.py` does not
+attempt stealth headers, proxy rotation, or any other evasion to get around
+it. It's fully implemented with real request flow and defensively-written
+(best-effort, unverified) selectors, and it fails the way this whole system
+is designed to handle a source failing: cleanly, via `SourceBlockedError`,
+leaving the other two adapters' results intact. This is exercised directly in
+`tests/adapters/test_croma_adapter.py` by replaying the real 403 response.
+
+### Vijay Sales — the listing page doesn't have live prices, but its own API does
+
+`vijaysales.com/c/iphones` allows a normal fetch, but its price blocks turned
+out to be either hidden or wrapped in Adobe Experience Manager
+`<sly data-sly-test>` template comments that never reach the rendered HTML —
+so scraping that page directly is unreliable for price. The page's own
+`store-config` meta tag advertises a public GraphQL endpoint
+(`/api/graphql`, `GET`), and calling it directly —
+`products(search: "iphone 17 pro") { name sku stock_status rating_summary
+price_range { ... } }` — returns clean, authoritative data: the exact API
+the site's own frontend uses, no auth, no bypass. `app/scrapers/vijay_sales.py`
+therefore skips HTML scraping for this source entirely and calls that API,
+which is also a strict improvement over the spec's given category URL: it's
+a full-text product search, so it isn't limited to the iPhone-only listing
+page and works for any brand/model. This is the spec's own optional bullet,
+*"Direct API/network-data extraction where appropriate and permitted."*
+Bank-offer text isn't in that API's schema, and the spec's given bank-offers
+URL 404s today (the site moved that content into an on-page popup component
+since the spec was written) — so as a bounded, best-effort enrichment, the
+adapter fetches the product page for up to 5 top matches and pulls bank
+names + EMI terms out of an embedded `data-cf` JSON fragment; if that fails,
+the (already fully priced) listing ships anyway.
+
+### Reliance Digital — recommended page as a base, plus a smarter cascade on top
+
+`reliancedigital.in/collection/smartphones` (the spec's given URL) is fully
+server-rendered (Vue/Nuxt) with real product cards — name, live price, MRP,
+discount, image, stock status, and a per-card bank/card offer teaser —
+already present in the raw HTML, so `app/scrapers/reliance_digital.py`
+scrapes it directly with `BeautifulSoup`. One robots.txt constraint shapes
+every request this adapter makes: Reliance Digital's `robots.txt` disallows
+**every URL containing a query string** (`Disallow: /*?*`, plus an explicit
+`Disallow: /products?q=*`), including its own site-search endpoint and the
+`?internal_source=...` tracking suffix every product link carries — so this
+adapter never appends query parameters, and always strips that suffix off
+product URLs before following them.
+
+That single generic page has a real gap, though: it only ever shows the
+~50 products (across *every* brand) that happen to be first server-rendered
+right now, with no robots-compliant way to page through the rest. Verified
+during development: searching "iPhone 17 Pro" against it alone returned
+**zero** Reliance Digital results, despite the phone being in stock on the
+site. Reliance Digital's own public sitemap
+(`sitemap.xml` → `sitemap/collections.sitemap.xml`) lists thousands of
+static, robots-compliant `/collection/<slug>` pages, and several are genuine
+complete per-model catalogues — `/collection/iphone-17-pro` alone lists
+every storage/colour combination of both iPhone 17 Pro *and* Pro Max. So
+the adapter now tries, in order: the most specific known collection for the
+query (`MODEL_COLLECTION_SLUGS`) → a broader Apple-only collection → the
+original generic page — stopping at the first tier that actually returns
+matching listings. Verified live, this took the same "iPhone 17 Pro" search
+from 0 Reliance Digital results to 12.
+
+These per-model slugs are Reliance Digital's own marketing/campaign URLs
+though, not a documented stable API — several looked plausible but already
+404'd or redirected to an empty page when checked while building this (their
+campaign pages appear to rotate over time). So the cascade treats a stale
+slug as "skip to the next tier," never as a fetch failure — worst case, a
+fully stale curated list degrades exactly back to the original single-page
+behavior, it never does worse.
+
+### No Playwright / headless browser
+
+Not used anywhere, and this is a deliberate call against one of the spec's
+*optional* bullets: it isn't needed for any of the three sources above (the
+GraphQL call solves Vijay Sales, Reliance Digital is server-rendered
+already), and for Croma the blocker is a WAF decision, not a
+JavaScript-rendering problem — a headless browser wouldn't legitimately get
+past it without fingerprint evasion, which is exactly the kind of access-
+control bypass the spec says not to do.
+
+## Data model
+
+- **Product** — `brand`, `model`, `canonical_name`
+- **Variant** — `storage`, `colour`, `variant_key` (the normalized
+  `brand|model|storage|colour` string used to group the same item across
+  sources)
+- **Listing** — one scraped snapshot: `source`, prices, `availability`,
+  `seller`, `rating`, `crawl_id`, `scraped_at`. **Append-only** — a new row
+  is written every crawl rather than updating one in place, which is what
+  makes price history free.
+- **Offer** — raw scraped offer *facts* only: `offer_text`, `offer_type`,
+  `bank`, `offer_discount`, `emi_available`/`emi_tenure`/`emi_rate` (when the
+  source states them). Never mixed with calculated values.
+- **CrawlRun** — one row per search: which sources were attempted, how many
+  succeeded/failed, and human-readable notes.
+- **SearchCache** — maps a normalized query to the `crawl_id` that answered
+  it, with a TTL.
+
+## Product matching
+
+`app/matching/normalizer.py` turns a raw, source-specific title into
+brand/model/storage/colour. It's built around the shape real listing titles
+actually take (verified against live Vijay Sales/Reliance Digital output):
+brand+model first, then a comma/parenthesis-delimited spec list ending in
+colour — e.g. `"Apple iPhone 17 Pro (256GB Storage, Black)"` or
+`"OPPO Reno16c 256 GB, 8 GB RAM, Stellar Purple, Mobile Phone"`. Storage and
+RAM segments are recognized and discarded, filler segments (`"Mobile
+Phone"`, `"5G"`, ...) are discarded, and the last surviving segment is taken
+as colour — rather than guessing colour out of unstructured free text, which
+is far less reliable given how varied marketing colour names are ("Cosmic
+Orange", "Ultramarine", "Stellar Purple", ...).
+
+`app/matching/matcher.py` groups listings into `Variant` rows: an exact
+`variant_key` match first; if that misses (e.g. one source's model text has
+an extra/missing word), a `rapidfuzz` fuzzy fallback compares model text
+among variants that **already share the same brand, storage, and colour** —
+storage/colour are exact-match filters, not part of the fuzzy comparison,
+specifically so that two genuinely different colours or capacities of the
+same phone are never merged just because their model text matches (this was
+caught and fixed during live testing — see
+`test_different_colour_creates_separate_variant_not_fuzzy_merged`).
+
+## EMI and offer logic
+
+`app/pricing/emi.py` keeps scraped facts and calculated values strictly
+separate, per the spec:
+
+- **Effective price** = `selling_price - best single offer_discount`. Offers
+  are **not** assumed combinable — the largest single discount is used, not
+  a sum of every offer on the listing.
+- **EMI** uses the standard reducing-balance formula
+  `EMI = P·r·(1+r)^n / ((1+r)^n - 1)` on the financed amount (effective price
+  minus down payment), or a flat `P/n` split with zero interest when a
+  no-cost-EMI offer is present or the caller passes a `0%` rate — a clearly
+  documented assumption, not a guess.
+- Every EMI figure in the API response carries `"estimate": true`, and the
+  UI labels EMI values as estimates.
+- `app/pricing/deal_score.py` is a documented, bounded 0–100 score
+  (60% effective-price rank within the matched group, 20% discount depth,
+  20% availability, scaled by a small source-reliability weight) — a
+  reasonable tie-breaker beyond raw price, not a black box.
+
+## API
+
+Matches the spec's endpoint table exactly:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | Search UI |
+| `GET /health` | `{"status": "ok", "db": "ok"}` |
+| `POST /api/search` | `{model, storage?, colour?, budget_min?, budget_max?, emi_tenure_months?, down_payment?, emi_annual_rate_percent?, sources?}` → ranked comparison |
+| `GET /api/product/<variant_id>` | Normalized product/variant + latest listing per source |
+| `GET /api/offers/<listing_id>` | Offers/EMI-relevant facts for one listing |
+| `GET /api/price-history/<variant_id>` | All scraped price points for a variant, oldest to newest |
+
+## Full-catalogue crawl (scheduled refresh)
+
+`POST /api/search` is deliberately scoped to one query — it scrapes just
+enough to answer that search. For building a broad, standing dataset
+instead (the spec's optional "Scheduled refresh / background jobs"
+feature), run:
+
+```bash
+python scripts/crawl_full_catalog.py
+# or a subset:
+python scripts/crawl_full_catalog.py --sources vijay_sales,reliance_digital
+```
+
+This sweeps each source as completely as it will respectfully allow, not
+just one query's worth:
+- **Vijay Sales** pages through its public GraphQL search (`smartphone` and
+  `mobile phone`, ~25 requests at 100 results/page) — verified live at
+  **1058+ real phone listings** across ~400 distinct models. A broad text
+  search like this also matches non-phones (a "Smartphone Printer", a
+  smartwatch) — caught during development — so results are filtered by the
+  product's actual site category (`categories.url_key == "smartphones"`),
+  not just a name-keyword guess.
+- **Reliance Digital** sweeps every collection page the live adapter
+  already knows about (`app/scrapers/reliance_digital.py`'s
+  `ALL_CATALOG_COLLECTION_SLUGS`) plus the generic page, de-duplicated by
+  product URL.
+- **Croma** is attempted too, for completeness — expected to fail (see the
+  adapters section above), not a bug in this script.
+
+Everything found is persisted through the same matching/normalization
+pipeline `/api/search` uses, under one `CrawlRun` tagged
+`"mode": "full_catalog_crawl"` — so it's immediately queryable through
+`/api/product/<id>` and `/api/price-history/<id>` like any other scraped
+data. It intentionally skips the per-listing bank-offer enrichment the live
+Vijay Sales search does (one extra request per result — fine for ~5, not
+for hundreds), so bulk-crawled listings have prices/availability but not
+offer text.
+
+This is genuinely hundreds of real listings, not "millions" — these
+retailers don't carry that many distinct phone models. The goal is
+complete, respectful coverage of what each site actually exposes, not an
+arbitrary bigger number.
+
+## Testing
+
+- **Unit** (`tests/unit/`) — normalizer, matcher, EMI math, deal score.
+- **Adapters** (`tests/adapters/`) — each adapter parsed against a fixture
+  file captured live from the real site while building this (see
+  `tests/fixtures/`), including a test that replays Croma's actual 403 body
+  and asserts it's handled as a clean partial failure, not an exception.
+- **Integration** (`tests/integration/`) — Flask test client against every
+  endpoint, with the adapter registry monkeypatched to fake adapters so
+  these run deterministically offline; covers ranking/effective-price/EMI
+  correctness, one-source-failing-doesn't-break-the-search, and the search
+  cache actually skipping a second crawl.
+
+## Assumptions and known limitations
+
+- **Croma** will most likely fail with a 403 from a typical cloud/CI/
+  datacenter IP (see above) — this is expected, observed, and handled, not a
+  bug. It may well succeed from a residential IP; the selectors are
+  best-effort since no successful fetch was obtainable to verify them while
+  building this.
+- **Reliance Digital** has a curated cascade of per-model collection pages
+  for common iPhones (see the adapters section above), but that list isn't
+  exhaustive and those slugs can go stale over time; a query outside it
+  falls back to the single first server-rendered page of
+  `/collection/smartphones` (robots.txt disallows the query-string
+  pagination/search parameters that would reach further pages), so a
+  long-tail or non-curated model can still legitimately return nothing from
+  this source alone — Vijay Sales' full-text API doesn't have this
+  limitation, and one source having a gap for a given model never blocks
+  the other two from still returning their results.
+- The **colour** field is only extracted when a title follows the
+  comma/paren spec-list shape real adapter output uses; a single unbroken
+  string with no separators (e.g. a hypothetical `"iPhone17Pro256GBTitanium"`)
+  will fold the trailing word into `model` instead. No real adapter output
+  observed while building this took that shape.
+- EMI interest rate is a configurable assumption (`EMI_DEFAULT_ANNUAL_RATE_PERCENT`,
+  default 14%) when a source doesn't state one and the caller doesn't
+  override it — clearly surfaced in the response as `emi_assumptions`, never
+  presented as a scraped fact.
+- Not implemented, by choice (see the adapters section above for the
+  reasoning): Playwright/headless rendering, scheduled/Celery background
+  refresh. Both are marked optional/advanced in the spec.

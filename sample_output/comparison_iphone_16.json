@@ -1,0 +1,1011 @@
+{
+  "crawl_id": "5168a7efc19842f8b813c1eb9a6f97ac",
+  "query": {
+    "model": "iPhone 16",
+    "storage": null,
+    "colour": null,
+    "budget_min": null,
+    "budget_max": null
+  },
+  "emi_assumptions": {
+    "tenure_months": 12,
+    "down_payment": 0.0,
+    "annual_rate_percent": 14.0,
+    "note": "EMI figures are calculated estimates, not scraped facts."
+  },
+  "sources_attempted": 3,
+  "sources_succeeded": 2,
+  "sources_failed": 1,
+  "source_notes": "croma: Blocked by source (403 - access control / bot protection); reliance_digital: ok (5 listing(s)); vijay_sales: ok (15 listing(s))",
+  "scraped_at": "2026-09-02T15:24:21.075618",
+  "results": [
+    {
+      "listing_id": 34,
+      "variant_id": 20,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 16 128 GB, Black",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-16-128-gb-black-m0xrrm-8590265",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494423013/0/TmbtqYVkO7-h97wWDixt2-Apple-iPhone-16-494423013-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 69900.0,
+      "selling_price": 69900.0,
+      "discount": 0.0,
+      "effective_price": 64900.0,
+      "availability": "available",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "Best price with all applicable offers: Rs.64,900",
+          "offer_type": "other",
+          "bank": null,
+          "offer_discount": 5000.0,
+          "emi_available": false,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 5827.18,
+        "total_repayment": 69926.21,
+        "total_interest": 5026.21,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 84.8,
+      "scraped_at": "2026-09-02T15:24:20.889297"
+    },
+    {
+      "listing_id": 37,
+      "variant_id": 21,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Teal"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (128GB Storage, Teal)",
+      "product_url": "https://www.vijaysales.com/p/232289/apple-iphone-16-128gb-storage-teal",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232289-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 68900.0,
+      "selling_price": 68900.0,
+      "discount": 0.0,
+      "effective_price": 68900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.8,
+      "review_count": 10,
+      "offers": [
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via American Express Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "American Express Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Amex Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Amex Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Aub Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Aub Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 0.0,
+        "monthly_emi": 5741.67,
+        "total_repayment": 68900.0,
+        "total_interest": 0.0,
+        "is_no_cost_emi": true,
+        "estimate": true
+      },
+      "deal_score": 74.7,
+      "scraped_at": "2026-09-02T15:24:20.980867"
+    },
+    {
+      "listing_id": 38,
+      "variant_id": 18,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Pink"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (128GB Storage, Pink)",
+      "product_url": "https://www.vijaysales.com/p/232287/apple-iphone-16-128gb-storage-pink",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232287-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 68900.0,
+      "selling_price": 68900.0,
+      "discount": 0.0,
+      "effective_price": 68900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 3,
+      "offers": [
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via American Express Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "American Express Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Amex Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Amex Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Aub Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Aub Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 0.0,
+        "monthly_emi": 5741.67,
+        "total_repayment": 68900.0,
+        "total_interest": 0.0,
+        "is_no_cost_emi": true,
+        "estimate": true
+      },
+      "deal_score": 74.7,
+      "scraped_at": "2026-09-02T15:24:20.987095"
+    },
+    {
+      "listing_id": 45,
+      "variant_id": 20,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (128GB Storage, Black)P232288",
+      "product_url": "https://www.vijaysales.com/p/P232288/apple-iphone-16-128gb-storage-black-p232288",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/placeholder/default/vsdefault_1.png",
+      "currency": "INR",
+      "mrp": 68900.0,
+      "selling_price": 68900.0,
+      "discount": 0.0,
+      "effective_price": 68900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6186.33,
+        "total_repayment": 74235.99,
+        "total_interest": 5335.99,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 74.7,
+      "scraped_at": "2026-09-02T15:24:21.064521"
+    },
+    {
+      "listing_id": 47,
+      "variant_id": 27,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "White"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (128GB Storage, White)",
+      "product_url": "https://www.vijaysales.com/p/232286/apple-iphone-16-128gb-storage-white",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232286-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 68900.0,
+      "selling_price": 68900.0,
+      "discount": 0.0,
+      "effective_price": 68900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.8,
+      "review_count": 12,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6186.33,
+        "total_repayment": 74235.99,
+        "total_interest": 5335.99,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 74.7,
+      "scraped_at": "2026-09-02T15:24:21.066009"
+    },
+    {
+      "listing_id": 48,
+      "variant_id": 20,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (128GB Storage, Black)",
+      "product_url": "https://www.vijaysales.com/p/232285/apple-iphone-16-128gb-storage-black",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232285-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 68900.0,
+      "selling_price": 68900.0,
+      "discount": 0.0,
+      "effective_price": 68900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 4.5,
+      "review_count": 19,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6186.33,
+        "total_repayment": 74235.99,
+        "total_interest": 5335.99,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 74.7,
+      "scraped_at": "2026-09-02T15:24:21.066557"
+    },
+    {
+      "listing_id": 32,
+      "variant_id": 18,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Pink"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 16 128 GB, Pink",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-16-128-gb-pink-m0xrri-8590261",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494423015/0/T_UycMfONH-3hVOqZVGBC-Apple-iPhone-16-494423015-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 69900.0,
+      "selling_price": 69900.0,
+      "discount": 0.0,
+      "effective_price": 69900.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6276.12,
+        "total_repayment": 75313.43,
+        "total_interest": 5413.43,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 61.3,
+      "scraped_at": "2026-09-02T15:24:20.873669"
+    },
+    {
+      "listing_id": 35,
+      "variant_id": 21,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Teal"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 16 128 GB, Teal",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-16-128-gb-teal-m0xrss-8590284",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494423017/0/vXfzNoYsQx-PR8hdV9Yjo-Apple-iPhone-16-494423017-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 69900.0,
+      "selling_price": 69900.0,
+      "discount": 0.0,
+      "effective_price": 69900.0,
+      "availability": "out_of_stock",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6276.12,
+        "total_repayment": 75313.43,
+        "total_interest": 5413.43,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 61.3,
+      "scraped_at": "2026-09-02T15:24:20.908505"
+    },
+    {
+      "listing_id": 33,
+      "variant_id": 19,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 16 Plus 128 GB, Black",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-16-plus-128-gb-black-m0xqp8-8590111",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494423028/0/iCV0eXh784-Uoc9fgQUG6-Apple-iPhone-16-Plus-494423028-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 77990.0,
+      "discount": 1910.0,
+      "effective_price": 71990.0,
+      "availability": "available",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "Best price with all applicable offers: Rs.71,990",
+          "offer_type": "other",
+          "bank": null,
+          "offer_discount": 6000.0,
+          "emi_available": false,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6463.77,
+        "total_repayment": 77565.3,
+        "total_interest": 5575.3,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.1,
+      "scraped_at": "2026-09-02T15:24:20.884234"
+    },
+    {
+      "listing_id": 36,
+      "variant_id": 22,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Ultramarine"
+      },
+      "source": "reliance_digital",
+      "product_name": "Apple iPhone 16 Plus 128 GB, Ultramarine",
+      "product_url": "https://www.reliancedigital.in/product/apple-iphone-16-plus-128-gb-ultramarine-m0xqpb-8590114",
+      "image_url": "https://cdn.jiostore.online/v2/jmd-asp/jdprod/wrkr/products/pictures/item/free/original/apple/494423031/0/bundeEQnwp-dwRxHYJhw4-Apple-iPhone-16-Plus-494423031-i-1-1200Wx1200H.jpeg",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 77990.0,
+      "discount": 1910.0,
+      "effective_price": 71990.0,
+      "availability": "available",
+      "seller": "Reliance Digital",
+      "rating": null,
+      "review_count": null,
+      "offers": [
+        {
+          "offer_text": "Best price with all applicable offers: Rs.71,990",
+          "offer_type": "other",
+          "bank": null,
+          "offer_discount": 6000.0,
+          "emi_available": false,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 6463.77,
+        "total_repayment": 77565.3,
+        "total_interest": 5575.3,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 77.1,
+      "scraped_at": "2026-09-02T15:24:20.960487"
+    },
+    {
+      "listing_id": 39,
+      "variant_id": 23,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Pink"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (256GB Storage, Pink)",
+      "product_url": "https://www.vijaysales.com/p/232292/apple-iphone-16-256gb-storage-pink",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232292-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via American Express Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "American Express Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Amex Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Amex Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Aub Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Aub Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 0.0,
+        "monthly_emi": 6658.33,
+        "total_repayment": 79900.0,
+        "total_interest": 0.0,
+        "is_no_cost_emi": true,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:20.989742"
+    },
+    {
+      "listing_id": 40,
+      "variant_id": 24,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 (256GB Storage, Black)",
+      "product_url": "https://www.vijaysales.com/p/232290/apple-iphone-16-256gb-storage-black",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232290-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 2,
+      "offers": [
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via American Express Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "American Express Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Amex Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Amex Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Aub Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Aub Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 0.0,
+        "monthly_emi": 6658.33,
+        "total_repayment": 79900.0,
+        "total_interest": 0.0,
+        "is_no_cost_emi": true,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.050697"
+    },
+    {
+      "listing_id": 43,
+      "variant_id": 22,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Ultramarine"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (128GB Storage, Ultramarine)",
+      "product_url": "https://www.vijaysales.com/p/232273/apple-iphone-16-plus-128gb-storage-ultramarine",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232273-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 3,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 7173.99,
+        "total_repayment": 86087.89,
+        "total_interest": 6187.89,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.063146"
+    },
+    {
+      "listing_id": 44,
+      "variant_id": 19,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (128GB Storage, Black)",
+      "product_url": "https://www.vijaysales.com/p/232270/apple-iphone-16-plus-128gb-storage-black",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232270-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 2,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 7173.99,
+        "total_repayment": 86087.89,
+        "total_interest": 6187.89,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.063774"
+    },
+    {
+      "listing_id": 46,
+      "variant_id": 19,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (128GB Storage, Black)P232270",
+      "product_url": "https://www.vijaysales.com/p/P232270/apple-iphone-16-plus-128gb-storage-black-p232270",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/placeholder/default/vsdefault_1.png",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 7173.99,
+        "total_repayment": 86087.89,
+        "total_interest": 6187.89,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.065072"
+    },
+    {
+      "listing_id": 50,
+      "variant_id": 29,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Teal"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (128GB Storage, Teal)",
+      "product_url": "https://www.vijaysales.com/p/232274/apple-iphone-16-plus-128gb-storage-teal",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232274-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 7173.99,
+        "total_repayment": 86087.89,
+        "total_interest": 6187.89,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.074486"
+    },
+    {
+      "listing_id": 51,
+      "variant_id": 30,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "128GB",
+        "colour": "Pink"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (128GB Storage, Pink)",
+      "product_url": "https://www.vijaysales.com/p/232272/apple-iphone-16-plus-128gb-storage-pink",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232272-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 79900.0,
+      "selling_price": 79900.0,
+      "discount": 0.0,
+      "effective_price": 79900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 7173.99,
+        "total_repayment": 86087.89,
+        "total_interest": 6187.89,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 60.0,
+      "scraped_at": "2026-09-02T15:24:21.075545"
+    },
+    {
+      "listing_id": 42,
+      "variant_id": 26,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Black"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (256GB Storage, Black)",
+      "product_url": "https://www.vijaysales.com/p/232275/apple-iphone-16-plus-256gb-storage-black",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232270_1__1.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 89900.0,
+      "selling_price": 89900.0,
+      "discount": 0.0,
+      "effective_price": 89900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 8071.86,
+        "total_repayment": 96862.34,
+        "total_interest": 6962.34,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 46.7,
+      "scraped_at": "2026-09-02T15:24:21.062314"
+    },
+    {
+      "listing_id": 49,
+      "variant_id": 28,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "256GB",
+        "colour": "Pink"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (256GB Storage, Pink)",
+      "product_url": "https://www.vijaysales.com/p/232277/apple-iphone-16-plus-256gb-storage-pink",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232272_1__1.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 89900.0,
+      "selling_price": 89900.0,
+      "discount": 0.0,
+      "effective_price": 89900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": null,
+      "review_count": 0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 14.0,
+        "monthly_emi": 8071.86,
+        "total_repayment": 96862.34,
+        "total_interest": 6962.34,
+        "is_no_cost_emi": false,
+        "estimate": true
+      },
+      "deal_score": 46.7,
+      "scraped_at": "2026-09-02T15:24:21.071595"
+    },
+    {
+      "listing_id": 41,
+      "variant_id": 25,
+      "product": {
+        "brand": "Apple",
+        "model": "iPhone 16 Plus"
+      },
+      "variant": {
+        "storage": "512GB",
+        "colour": "Ultramarine"
+      },
+      "source": "vijay_sales",
+      "product_name": "Apple iPhone 16 Plus (512GB Storage, Ultramarine)",
+      "product_url": "https://www.vijaysales.com/p/232283/apple-iphone-16-plus-512gb-storage-ultramarine",
+      "image_url": "https://vsprod.vijaysales.com/media/catalog/product/2/3/232283-image.jpg?optimize=medium&fit=bounds&height=&width=",
+      "currency": "INR",
+      "mrp": 109900.0,
+      "selling_price": 109900.0,
+      "discount": 0.0,
+      "effective_price": 109900.0,
+      "availability": "available",
+      "seller": "Vijay Sales",
+      "rating": 5.0,
+      "review_count": 1,
+      "offers": [
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "AU Small Finance Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via American Express Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "American Express Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Amex Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Amex Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        },
+        {
+          "offer_text": "No-cost / low-cost EMI conversion available via Aub Bank Credit Card (bank terms apply)",
+          "offer_type": "no_cost_emi",
+          "bank": "Aub Bank Credit Card",
+          "offer_discount": null,
+          "emi_available": true,
+          "valid_till_text": null
+        }
+      ],
+      "emi": {
+        "tenure_months": 12,
+        "annual_rate_percent": 0.0,
+        "monthly_emi": 9158.33,
+        "total_repayment": 109900.0,
+        "total_interest": 0.0,
+        "is_no_cost_emi": true,
+        "estimate": true
+      },
+      "deal_score": 20.0,
+      "scraped_at": "2026-09-02T15:24:21.056132"
+    }
+  ],
+  "recommendation": {
+    "best_current_price": {
+      "source": "vijay_sales",
+      "amount": 68900.0
+    },
+    "best_effective_price": {
+      "source": "reliance_digital",
+      "amount": 64900.0
+    },
+    "lowest_emi": {
+      "source": "vijay_sales",
+      "monthly_emi": 5741.67,
+      "tenure_months": 12
+    },
+    "reason": "reliance_digital has the lowest effective price (Rs.64,900) after applicable offers, across 20 matched listing(s) from 2 source(s)."
+  }
+}
