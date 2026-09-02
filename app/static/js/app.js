@@ -591,7 +591,7 @@ async function executeSearch(payload) {
       : "";
     setStatus(sourceStatus + filterNote, data.sources_failed > 0);
     renderRows(filtered);
-    renderRecommendation(data.recommendation, data);
+    renderRecommendation(computeRecommendation(filtered), data);
     statusEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     if (myToken === requestToken) setStatus("Network error: " + err.message, true);
@@ -643,10 +643,41 @@ function getFilteredResults() {
     });
 }
 
+// Mirrors app/services/search_service.py's _build_recommendation() exactly,
+// so the "Best deal" panel always reflects what's actually in the table
+// below it. Without this, the panel kept showing the recommendation
+// computed from the *original, unfiltered* search response even after
+// Storage/Colour/Budget/Source narrowed the visible rows - so it could
+// call out a variant that had just been filtered out of the list entirely.
+function computeRecommendation(filtered) {
+  const priced = filtered.filter((r) => r.effective_price !== null);
+  if (!priced.length) return null;
+
+  const bestPriceEntry = priced.reduce((best, r) =>
+    (r.selling_price ?? Infinity) < (best.selling_price ?? Infinity) ? r : best
+  );
+  const bestEffectiveEntry = priced[0]; // filtering preserves the ascending effective-price order results already arrive sorted in
+  const withEmi = priced.filter((r) => r.emi);
+  const lowestEmiEntry = withEmi.length
+    ? withEmi.reduce((best, r) => (r.emi.monthly_emi < best.emi.monthly_emi ? r : best))
+    : null;
+  const sourceCount = new Set(priced.map((r) => r.source)).size;
+
+  return {
+    best_current_price: { source: bestPriceEntry.source, amount: bestPriceEntry.selling_price },
+    best_effective_price: { source: bestEffectiveEntry.source, amount: bestEffectiveEntry.effective_price },
+    lowest_emi: lowestEmiEntry
+      ? { source: lowestEmiEntry.source, monthly_emi: lowestEmiEntry.emi.monthly_emi, tenure_months: lowestEmiEntry.emi.tenure_months }
+      : null,
+    reason: `${formatSourceName(bestEffectiveEntry.source)} has the lowest effective price (${money(bestEffectiveEntry.effective_price)}) after applicable offers, across ${priced.length} matched listing(s) from ${sourceCount} source(s).`,
+  };
+}
+
 function applyLiveFilters() {
   if (!lastModelSearch) return;
   const filtered = getFilteredResults();
   renderRows(filtered);
+  renderRecommendation(computeRecommendation(filtered), lastModelSearch);
   setStatus(`Showing ${filtered.length} of ${lastModelSearch.results.length} listing(s) matching your filters.`, false);
 }
 
