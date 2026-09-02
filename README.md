@@ -75,6 +75,23 @@ before you run your first live search:
 python scripts/seed_db.py
 ```
 
+### Local development (Docker Compose, Postgres)
+
+Runs the app against Postgres — the spec's preferred database — instead of
+SQLite, with no local Python/Postgres install needed:
+
+```bash
+docker compose up --build
+# http://localhost:8000, migrations run automatically before the app starts
+```
+
+`docker-compose.yml` brings up two services: `db` (Postgres 16, with a
+healthcheck `web` waits on) and `web` (built from the same `Dockerfile` used
+in production, `DATABASE_URL` pointed at the `db` service). `docker-entrypoint.sh`
+runs `flask db upgrade` before `gunicorn` starts, so the schema is always
+current. Data persists in a named volume (`postgres_data`) across restarts;
+`docker compose down -v` clears it for a clean slate.
+
 For production, this deploys to Render (Postgres, `Dockerfile`-based) — see
 [Deploying to Render](#deploying-to-render) below.
 
@@ -387,7 +404,26 @@ Matches the spec's endpoint table exactly:
 | `POST /api/search` | `{model, storage?, colour?, budget_min?, budget_max?, emi_tenure_months?, down_payment?, emi_annual_rate_percent?, sources?}` → ranked comparison |
 | `GET /api/product/<variant_id>` | Normalized product/variant + latest listing per source |
 | `GET /api/offers/<listing_id>` | Offers/EMI-relevant facts for one listing |
-| `GET /api/price-history/<variant_id>` | All scraped price points for a variant, oldest to newest |
+| `GET /api/price-history/<variant_id>` | All scraped price points for a variant, oldest to newest, plus detected price drops |
+
+### Price history chart and price-drop detection
+
+`GET /api/price-history/<variant_id>` also returns `price_drops`: for each
+source independently, `app/pricing/price_drop.py` compares that source's
+latest two scrapes and reports a drop only when the price strictly
+decreased (never a source's price compared against a *different* source's -
+that's just two retailers, not a drop). It's a computed signal over
+already-scraped facts, same principle as EMI/deal-score.
+
+The "History" button on each result row (`app/static/js/app.js`) opens a
+modal with a hand-rolled inline-SVG line chart - one line per source,
+colour-coded, with hover tooltips - and a callout banner when a drop was
+found. No charting library: the project has no JS dependencies/build step
+at all, and a handful of points per source doesn't need one. Since `Listing`
+rows are append-only (see Data model above), this needed no new scraping or
+schema work - only a variant with more than one scrape (run a search for the
+same model more than once, cache TTL permitting) has more than one point to
+chart.
 
 ## Full-catalogue crawl (scheduled refresh)
 
@@ -434,7 +470,7 @@ arbitrary bigger number.
 
 ## Testing
 
-- **Unit** (`tests/unit/`) — normalizer, matcher, EMI math, deal score.
+- **Unit** (`tests/unit/`) — normalizer, matcher, EMI math, deal score, price-drop detection.
 - **Adapters** (`tests/adapters/`) — each adapter parsed against a fixture
   file captured live from the real site while building this (see
   `tests/fixtures/`), including a test that replays Croma's actual 403 body

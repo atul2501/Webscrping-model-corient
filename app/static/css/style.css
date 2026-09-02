@@ -24,39 +24,116 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .topbar {
   background: linear-gradient(135deg, #14172a 0%, #1c2142 100%);
   color: #fff;
-  padding: 28px 32px;
+  padding: 22px 32px;
   box-shadow: var(--shadow-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.topbar h1 {
-  margin: 0 0 4px;
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.topbar-inner {
+  max-width: 1120px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
 }
-.topbar h1::before {
-  content: "";
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #4f6bff;
-  box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.25);
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-mark {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  background: linear-gradient(135deg, #4f6bff 0%, #2b3ecb 100%);
+  box-shadow: 0 2px 10px rgba(79, 107, 255, 0.4);
 }
-.subtitle { margin: 0; color: #a7acc4; font-size: 13.5px; }
+.brand-text h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.subtitle { margin: 3px 0 0; color: #a7acc4; font-size: 13px; }
 
-.container { max-width: 1120px; margin: 0 auto; padding: 28px 32px 72px; }
+.topbar-meta { display: flex; align-items: center; gap: 10px; flex: none; }
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 600;
+  color: #cfd3e6;
+}
+.health-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8b90a8;
+  box-shadow: 0 0 0 3px rgba(139, 144, 168, 0.2);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.health-indicator.online .health-dot {
+  background: #3ddc84;
+  box-shadow: 0 0 0 3px rgba(61, 220, 132, 0.22);
+  animation: healthPulse 2s ease-in-out infinite;
+}
+.health-indicator.offline .health-dot {
+  background: #ff6b6b;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.22);
+}
+@keyframes healthPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.version-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #8b90a8;
+}
+
+.container { max-width: 1120px; margin: 0 auto; padding: 28px 32px 56px; }
+
+.site-footer {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .topbar-inner { flex-wrap: wrap; }
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
 
 .search-form {
   display: grid;
@@ -168,6 +245,10 @@ body {
 
 .field-submit { justify-content: flex-end; }
 .field-submit button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--brand);
   color: #fff;
   border: none;
@@ -202,6 +283,12 @@ body {
   box-shadow: var(--shadow-sm);
 }
 .source-toggle:hover:not(.active) { border-color: var(--brand); color: var(--brand); }
+
+/* Same reasoning as .modal-overlay[hidden] below: this rule's own
+   `display: flex` otherwise overrides the browser's `[hidden]` default,
+   so #status renders as an empty bordered box above the search results
+   on every page load, before any search ever runs. */
+.status[hidden] { display: none; }
 
 .status {
   margin-top: 18px;
@@ -363,8 +450,130 @@ body {
 }
 .pill.available { background: var(--good-soft); color: var(--good); }
 .pill.out_of_stock { background: var(--bad-soft); color: var(--bad); }
-.source-url { font-size: 12px; color: var(--brand); font-weight: 600; text-decoration: none; }
-.source-url:hover { text-decoration: underline; }
+.row-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.source-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  border: 1px solid rgba(43, 62, 203, 0.16);
+  color: var(--brand-dark);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+}
+.source-link-btn:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+.source-link-btn:active { transform: translateY(1px); }
+.source-link-btn svg { flex: none; }
+
+/* --- Price history modal ------------------------------------------- */
+
+/* [hidden] must win over the base rule's `display: flex` below - an
+   author stylesheet's `display` declaration otherwise overrides the
+   browser's own `[hidden] { display: none }` default regardless of the
+   attribute being present, so without this the overlay (and its empty
+   modal box) renders on top of the entire page from first load. */
+.modal-overlay[hidden] { display: none; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 32, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+  animation: overlayIn 0.15s ease both;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 48px rgba(16, 24, 40, 0.28);
+  animation: cardIn 0.2s ease both;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.modal-header h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.modal-subtitle { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+.modal-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.modal-close:hover { background: var(--bad-soft); border-color: #f3c1bd; color: var(--bad); }
+
+.modal-body { padding: 20px; overflow-y: auto; }
+
+.price-drop-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--good-soft);
+  border: 1px solid #b7e9cd;
+  color: var(--good);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.price-drop-banner svg { flex: none; }
+.price-drop-banner .offer-text { color: var(--text-soft); font-weight: 400; margin-left: 2px; }
+
+.price-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.price-chart-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.price-chart-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+.price-chart-wrap { width: 100%; }
+.price-chart-wrap svg { display: block; width: 100%; height: auto; }
+
+.history-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12.5px; }
+.history-table th, .history-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.history-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
+.history-table td.history-drop { color: var(--good); font-weight: 700; }
+
+.history-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
 @media (max-width: 860px) {
   .search-form { grid-template-columns: repeat(2, 1fr); }

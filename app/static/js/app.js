@@ -16,6 +16,12 @@ const budgetMinLabel = document.getElementById("budget-min-label");
 const budgetMaxLabel = document.getElementById("budget-max-label");
 const emiTenureSelect = document.getElementById("emi_tenure_months");
 const downPaymentInput = document.getElementById("down_payment");
+const healthIndicatorEl = document.getElementById("health-indicator");
+const healthLabelEl = healthIndicatorEl.querySelector(".health-label");
+const historyModalOverlay = document.getElementById("history-modal-overlay");
+const historyModalSubtitle = document.getElementById("history-modal-subtitle");
+const historyModalBody = document.getElementById("history-modal-body");
+const historyModalClose = document.getElementById("history-modal-close");
 
 // Holds the last real (live-scraped) search response, so picking a
 // Storage/Colour option after a search can re-filter the table instantly
@@ -29,9 +35,46 @@ let lastModelSearch = null;
 // the loading spinner with its own stale "options loaded" message.
 let requestToken = 0;
 
+// --- System status indicator (topbar) -----------------------------------
+//
+// Pings the app's own /health endpoint (checks the DB connection, not just
+// that Flask is up) so the topbar reflects real backend state instead of
+// being purely decorative.
+
+async function checkHealth() {
+  try {
+    const response = await fetch("/health");
+    const data = await response.json();
+    const healthy = response.ok && data.status === "ok" && data.db === "ok";
+    healthIndicatorEl.classList.toggle("online", healthy);
+    healthIndicatorEl.classList.toggle("offline", !healthy);
+    healthLabelEl.textContent = healthy ? "All systems live" : "Degraded";
+    healthIndicatorEl.title = healthy
+      ? "API and database are reachable"
+      : `API reachable, database status: ${data.db || "unknown"}`;
+  } catch (err) {
+    healthIndicatorEl.classList.remove("online");
+    healthIndicatorEl.classList.add("offline");
+    healthLabelEl.textContent = "Offline";
+    healthIndicatorEl.title = "Could not reach the API";
+  }
+}
+
+checkHealth();
+setInterval(checkHealth, 60000);
+
 function money(value) {
   if (value === null || value === undefined) return "-";
   return "Rs. " + Number(value).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+// The API identifies retailers by their internal slug ("vijay_sales",
+// "reliance_digital") - fine as a lookup key, not as something to show a
+// user. Mirrors the same "replace('_', ' ').title()" the source-toggle
+// buttons already get server-side in index.html.
+function formatSourceName(source) {
+  if (!source) return "";
+  return source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // Mirrors app/pricing/emi.py's reducing-balance formula exactly, so changing
@@ -172,12 +215,12 @@ function renderRecommendation(rec, meta) {
   }
   recommendationEl.hidden = false;
   const lines = [
-    `<li><strong>Best current price:</strong> ${rec.best_current_price.source} - ${money(rec.best_current_price.amount)}</li>`,
-    `<li><strong>Best effective price after offers:</strong> ${rec.best_effective_price.source} - ${money(rec.best_effective_price.amount)}</li>`,
+    `<li><strong>Best current price:</strong> ${formatSourceName(rec.best_current_price.source)} - ${money(rec.best_current_price.amount)}</li>`,
+    `<li><strong>Best effective price after offers:</strong> ${formatSourceName(rec.best_effective_price.source)} - ${money(rec.best_effective_price.amount)}</li>`,
   ];
   if (rec.lowest_emi) {
     lines.push(
-      `<li><strong>Lowest EMI (${rec.lowest_emi.tenure_months} mo):</strong> ${rec.lowest_emi.source} - ${money(rec.lowest_emi.monthly_emi)}/month</li>`
+      `<li><strong>Lowest EMI (${rec.lowest_emi.tenure_months} mo):</strong> ${formatSourceName(rec.lowest_emi.source)} - ${money(rec.lowest_emi.monthly_emi)}/month</li>`
     );
   }
   lines.push(`<li>${rec.reason}</li>`);
@@ -216,11 +259,14 @@ function renderRows(results) {
       : "-";
 
     tr.innerHTML = `
-      <td>${row.source}${isBest ? '<span class="best-badge">Best</span>' : ""}</td>
+      <td>${formatSourceName(row.source)}${isBest ? '<span class="best-badge">Best</span>' : ""}</td>
       <td>
         ${row.product.brand} ${row.product.model}
         <span class="offer-text">${[row.variant.storage, row.variant.colour].filter(Boolean).join(" / ") || ""}</span>
-        ${row.product_url ? `<br><a class="source-url" href="${row.product_url}" target="_blank" rel="noopener">source link</a>` : ""}
+        <div class="row-links">
+          ${row.product_url ? `<a class="source-link-btn" href="${row.product_url}" target="_blank" rel="noopener">View listing<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ""}
+          <button type="button" class="source-link-btn history-btn" data-variant-id="${row.variant_id}">History<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 3 3 15 21 15"/><polyline points="7 11 11 7 14 10 20 4"/></svg></button>
+        </div>
       </td>
       <td>${money(row.selling_price)}${row.mrp && row.mrp !== row.selling_price ? `<span class="offer-text">MRP ${money(row.mrp)}</span>` : ""}</td>
       <td>${offersHtml || "-"}</td>
@@ -232,6 +278,209 @@ function renderRows(results) {
     tbody.appendChild(tr);
   });
 }
+
+// --- Price history modal (chart + drop detection) -----------------------
+//
+// A hand-rolled SVG line chart, not a charting library - this project has
+// zero JS dependencies (no package.json/build step at all), and a handful
+// of price points per source doesn't warrant adding one just for this.
+
+const SOURCE_CHART_COLOURS = {
+  croma: "#e0631f",
+  vijay_sales: "#2b3ecb",
+  reliance_digital: "#067a46",
+};
+const FALLBACK_CHART_COLOURS = ["#8b5cf6", "#0891b2", "#be185d", "#65a30d"];
+
+function colourForSource(source, fallbackIndex) {
+  return SOURCE_CHART_COLOURS[source] || FALLBACK_CHART_COLOURS[fallbackIndex % FALLBACK_CHART_COLOURS.length];
+}
+
+function axisPriceLabel(price) {
+  return Number(price).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+function formatHistoryDate(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return (
+    d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+    " " +
+    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
+function buildPriceHistoryChart(history) {
+  const priced = history.filter((p) => p.selling_price !== null && p.scraped_at);
+  if (!priced.length) return null;
+
+  const width = 640;
+  const height = 220;
+  const marginLeft = 68;
+  const marginRight = 16;
+  const marginTop = 12;
+  const marginBottom = 28;
+  const plotWidth = width - marginLeft - marginRight;
+  const plotHeight = height - marginTop - marginBottom;
+
+  const times = priced.map((p) => new Date(p.scraped_at).getTime());
+  const prices = priced.map((p) => p.selling_price);
+  let minTime = Math.min(...times);
+  let maxTime = Math.max(...times);
+  if (minTime === maxTime) {
+    minTime -= 1;
+    maxTime += 1;
+  }
+  let minPrice = Math.min(...prices);
+  let maxPrice = Math.max(...prices);
+  if (minPrice === maxPrice) {
+    const pad = Math.max(minPrice * 0.05, 100);
+    minPrice -= pad;
+    maxPrice += pad;
+  } else {
+    const pad = (maxPrice - minPrice) * 0.1;
+    minPrice -= pad;
+    maxPrice += pad;
+  }
+
+  const x = (t) => marginLeft + ((t - minTime) / (maxTime - minTime)) * plotWidth;
+  const y = (p) => marginTop + plotHeight - ((p - minPrice) / (maxPrice - minPrice)) * plotHeight;
+
+  const bySource = {};
+  priced.forEach((point) => {
+    (bySource[point.source] = bySource[point.source] || []).push(point);
+  });
+  const sourceNames = Object.keys(bySource);
+
+  const gridLineCount = 4;
+  let gridSvg = "";
+  for (let i = 0; i <= gridLineCount; i++) {
+    const price = minPrice + ((maxPrice - minPrice) * i) / gridLineCount;
+    const gy = y(price);
+    gridSvg += `<line x1="${marginLeft}" y1="${gy}" x2="${width - marginRight}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>`;
+    gridSvg += `<text x="${marginLeft - 8}" y="${gy + 3}" font-size="10" fill="var(--muted)" text-anchor="end">${axisPriceLabel(price)}</text>`;
+  }
+
+  const axisSvg = `
+    <text x="${marginLeft}" y="${height - 8}" font-size="10" fill="var(--muted)" text-anchor="start">${formatHistoryDate(new Date(minTime).toISOString())}</text>
+    <text x="${width - marginRight}" y="${height - 8}" font-size="10" fill="var(--muted)" text-anchor="end">${formatHistoryDate(new Date(maxTime).toISOString())}</text>
+  `;
+
+  let seriesSvg = "";
+  const legendItems = [];
+  sourceNames.forEach((source, idx) => {
+    const points = bySource[source].sort((a, b) => new Date(a.scraped_at) - new Date(b.scraped_at));
+    const colour = colourForSource(source, idx);
+    legendItems.push({ source, colour });
+
+    if (points.length > 1) {
+      const linePoints = points.map((p) => `${x(new Date(p.scraped_at).getTime())},${y(p.selling_price)}`).join(" ");
+      seriesSvg += `<polyline points="${linePoints}" fill="none" stroke="${colour}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    points.forEach((p) => {
+      const cx = x(new Date(p.scraped_at).getTime());
+      const cy = y(p.selling_price);
+      seriesSvg += `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${colour}"><title>${formatSourceName(source)}: ${money(p.selling_price)} on ${formatHistoryDate(p.scraped_at)}</title></circle>`;
+    });
+  });
+
+  const svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Price history chart">${gridSvg}${seriesSvg}${axisSvg}</svg>`;
+
+  const legendHtml = legendItems
+    .map(
+      (item) =>
+        `<span class="price-chart-legend-item"><span class="price-chart-legend-dot" style="background:${item.colour}"></span>${formatSourceName(item.source)}</span>`
+    )
+    .join("");
+
+  return `<div class="price-chart-legend">${legendHtml}</div><div class="price-chart-wrap">${svg}</div>`;
+}
+
+function renderPriceDropBanner(drops) {
+  if (!drops || !drops.length) return "";
+  return drops
+    .map(
+      (d) => `
+        <div class="price-drop-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          <span>${formatSourceName(d.source)} price dropped ${money(d.drop_amount)} (${d.drop_percent}%)<span class="offer-text">${money(d.previous_price)} &rarr; ${money(d.current_price)}, since ${formatHistoryDate(d.previous_scraped_at)}</span></span>
+        </div>`
+    )
+    .join("");
+}
+
+function renderHistoryTable(history) {
+  if (!history.length) return "";
+  const rows = history
+    .slice()
+    .reverse() // most recent first
+    .map(
+      (p) => `
+        <tr>
+          <td>${formatHistoryDate(p.scraped_at)}</td>
+          <td>${formatSourceName(p.source)}</td>
+          <td>${money(p.selling_price)}</td>
+          <td><span class="pill ${p.availability || ""}">${p.availability || "unknown"}</span></td>
+        </tr>`
+    )
+    .join("");
+  return `<table class="history-table"><thead><tr><th>Scraped</th><th>Source</th><th>Price</th><th>Availability</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function openPriceHistory(variantId) {
+  historyModalOverlay.hidden = false;
+  historyModalSubtitle.textContent = "Loading...";
+  historyModalBody.innerHTML = `<div class="history-empty"><span class="spinner"></span></div>`;
+
+  try {
+    const response = await fetch(`/api/price-history/${variantId}`);
+    const data = await response.json();
+    if (!response.ok) {
+      historyModalSubtitle.textContent = "";
+      historyModalBody.innerHTML = `<div class="history-empty">${data.error || "Could not load price history."}</div>`;
+      return;
+    }
+
+    historyModalSubtitle.textContent = [
+      `${data.product.brand} ${data.product.model}`,
+      [data.variant.storage, data.variant.colour].filter(Boolean).join(" / "),
+    ]
+      .filter(Boolean)
+      .join(" - ");
+
+    if (!data.history.length) {
+      historyModalBody.innerHTML = `<div class="history-empty">No price history recorded for this listing yet - run a few searches over time to build one up.</div>`;
+      return;
+    }
+
+    const chartHtml =
+      buildPriceHistoryChart(data.history) || `<div class="history-empty">Not enough priced data points to chart yet.</div>`;
+    historyModalBody.innerHTML = renderPriceDropBanner(data.price_drops) + chartHtml + renderHistoryTable(data.history);
+  } catch (err) {
+    historyModalSubtitle.textContent = "";
+    historyModalBody.innerHTML = `<div class="history-empty">Network error: ${err.message}</div>`;
+  }
+}
+
+function closePriceHistory() {
+  historyModalOverlay.hidden = true;
+  historyModalBody.innerHTML = "";
+}
+
+tbody.addEventListener("click", (event) => {
+  const button = event.target.closest(".history-btn");
+  if (!button) return;
+  openPriceHistory(button.dataset.variantId);
+});
+
+historyModalClose.addEventListener("click", closePriceHistory);
+historyModalOverlay.addEventListener("click", (event) => {
+  if (event.target === historyModalOverlay) closePriceHistory();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !historyModalOverlay.hidden) closePriceHistory();
+});
 
 // --- Model autocomplete -----------------------------------------------
 
@@ -335,8 +584,13 @@ async function executeSearch(payload) {
       return;
     }
 
-    setStatus(`${data.sources_succeeded}/${data.sources_attempted} source(s) responded successfully.`, data.sources_failed > 0);
-    renderRows(data.results);
+    const filtered = getFilteredResults();
+    const sourceStatus = `${data.sources_succeeded}/${data.sources_attempted} source(s) responded successfully.`;
+    const filterNote = filtered.length !== data.results.length
+      ? ` Showing ${filtered.length} of ${data.results.length} matching your current filters.`
+      : "";
+    setStatus(sourceStatus + filterNote, data.sources_failed > 0);
+    renderRows(filtered);
     renderRecommendation(data.recommendation, data);
     statusEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
@@ -348,9 +602,16 @@ async function executeSearch(payload) {
 // remove any rows but do change the EMI figure shown for each one - all of
 // it applied instantly, client-side, against the last real search response
 // (no new request - the underlying prices/offers haven't changed).
-function applyLiveFilters() {
-  if (!lastModelSearch) return;
-
+//
+// Pulled apart from rendering/status so executeSearch() can reuse the same
+// filtering logic: a live search takes a few seconds, and a user who picks
+// Colour or sets Down Payment *while it's still in flight* had those choices
+// silently dropped once the response landed (lastModelSearch was still null
+// when they touched the control, so applyLiveFilters() no-op'd, and the
+// response handler then rendered the full, unfiltered set). Re-applying
+// whatever's currently selected - here, not just on the next manual change -
+// is what makes that already-chosen colour/down payment actually take effect.
+function getFilteredResults() {
   const storage = storageSelect.value;
   const colour = colourSelect.value;
   const { min: budgetMin, max: budgetMax } = getBudgetBounds();
@@ -358,10 +619,18 @@ function applyLiveFilters() {
   const downPayment = Number(downPaymentInput.value) || 0;
   const baseRate = lastModelSearch.emi_assumptions ? lastModelSearch.emi_assumptions.annual_rate_percent : 14.0;
 
-  const filtered = lastModelSearch.results
+  // Only treat the source toggles as an active filter once fewer than all of
+  // them are selected - every button starts "active" (see index.html), and
+  // that all-selected state means "no filter", same as storage/colour "Any".
+  const allSources = Array.from(sourceTogglesEl.querySelectorAll(".source-toggle")).map((b) => b.dataset.source);
+  const selectedSources = getSelectedSources();
+  const sourceFilterActive = selectedSources.length > 0 && selectedSources.length < allSources.length;
+
+  return lastModelSearch.results
     .filter((r) => {
       if (storage && r.variant.storage !== storage) return false;
       if (colour && r.variant.colour !== colour) return false;
+      if (sourceFilterActive && !selectedSources.includes(r.source)) return false;
       if (budgetMin !== null && (r.selling_price === null || r.selling_price < budgetMin)) return false;
       if (budgetMax !== null && (r.selling_price === null || r.selling_price > budgetMax)) return false;
       return true;
@@ -372,7 +641,11 @@ function applyLiveFilters() {
       const financed = Math.max(r.effective_price - downPayment, 0);
       return { ...r, emi: calculateEmiClientSide(financed, tenureMonths, baseRate, noCostEmi) };
     });
+}
 
+function applyLiveFilters() {
+  if (!lastModelSearch) return;
+  const filtered = getFilteredResults();
   renderRows(filtered);
   setStatus(`Showing ${filtered.length} of ${lastModelSearch.results.length} listing(s) matching your filters.`, false);
 }
@@ -381,11 +654,37 @@ function applyLiveFilters() {
 [budgetMinInput, budgetMaxInput, downPaymentInput].forEach((el) => el.addEventListener("input", applyLiveFilters));
 
 // --- Source filter, as toggle buttons -----------------------------------
-
+//
+// Every button starts active (all sources shown - see index.html), so a
+// plain toggle() on click made clicking "Croma" turn Croma *off* the first
+// time (it was already on) while Vijay Sales/Reliance Digital stayed on -
+// the exact opposite of "show me only Croma". A plain click now isolates
+// the clicked source instead (mirrors the common chart-legend pattern);
+// clicking the sole remaining active source again resets to "all sources".
+// Ctrl/Cmd/Shift-click still adds or removes one source from the current
+// selection, for picking e.g. "Croma + Vijay Sales" without Reliance
+// Digital, and a click is never allowed to leave zero sources selected.
 sourceTogglesEl.addEventListener("click", (event) => {
   const button = event.target.closest(".source-toggle");
   if (!button) return;
-  button.classList.toggle("active");
+
+  const buttons = Array.from(sourceTogglesEl.querySelectorAll(".source-toggle"));
+  const activeButtons = buttons.filter((b) => b.classList.contains("active"));
+  const isSoleActive = activeButtons.length === 1 && activeButtons[0] === button;
+
+  if (event.shiftKey || event.metaKey || event.ctrlKey) {
+    if (button.classList.contains("active")) {
+      if (activeButtons.length > 1) button.classList.remove("active");
+    } else {
+      button.classList.add("active");
+    }
+  } else if (isSoleActive) {
+    buttons.forEach((b) => b.classList.add("active"));
+  } else {
+    buttons.forEach((b) => b.classList.toggle("active", b === button));
+  }
+
+  applyLiveFilters();
 });
 
 function getSelectedSources() {

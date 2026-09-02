@@ -1,6 +1,16 @@
 """Seeds a small, offline demo dataset (no network calls) so an evaluator can
-inspect /api/product, /api/offers and /api/price-history without first
-running a live search. Safe to re-run - it's idempotent per crawl_id.
+inspect /api/product, /api/offers and /api/price-history - with a real,
+multi-day price trend to chart - without first running several live
+searches over time to build one up naturally.
+
+Runs raw titles through the same app.matching.normalizer/matcher pipeline
+_persist_listing() uses for real scraped data, rather than hand-writing
+variant_key strings - so this stays correct if normalization logic ever
+changes, and if a variant already exists (e.g. from a live search run
+before this script), the seeded history is added onto it instead of
+creating a duplicate.
+
+Safe to re-run - idempotent per crawl_id.
 
 Usage: python scripts/seed_db.py
 """
@@ -13,9 +23,51 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from app.extensions import db
-from app.models import CrawlRun, Listing, Offer, Product, Variant
+from app.matching.matcher import get_or_create_variant
+from app.matching.normalizer import parse_product_name
+from app.models import CrawlRun, Listing, Offer
 
 SEED_CRAWL_ID = "seed-demo-crawl-0001"
+
+# One entry per demo product: a raw title in the same comma/paren shape
+# real adapters produce (see normalizer.py's docstring), and a per-source
+# price trend as (mrp, selling_price, days_ago) tuples, oldest first -
+# each trending downward, so every seeded product shows a genuine price
+# drop when charted, not just a flat line.
+DEMO_PRODUCTS = [
+    {
+        "raw_name": "Apple iPhone 17 Pro (256GB Storage, Cosmic Orange)",
+        "trend": {
+            "vijay_sales": [(132990, 129590, 6), (132990, 127990, 3), (132990, 126990, 0)],
+            "reliance_digital": [(131900, 128990, 6), (131900, 128499, 3), (131900, 127990, 0)],
+        },
+        "offer": {"bank": "HDFC", "text": "10% instant discount up to Rs.4,000 on HDFC Bank Credit Cards", "discount": 4000},
+    },
+    {
+        "raw_name": "Apple iPhone 16 (128GB Storage, Black)",
+        "trend": {
+            "vijay_sales": [(69900, 68900, 5), (69900, 67900, 2), (69900, 66900, 0)],
+            "reliance_digital": [(69900, 69900, 5), (69900, 68900, 2), (69900, 64900, 0)],
+        },
+        "offer": {"bank": "ICICI", "text": "5% cashback up to Rs.2,000 on ICICI Bank Credit Cards", "discount": 2000},
+    },
+    {
+        "raw_name": "Samsung Galaxy S24 Ultra 256 GB, Titanium Black",
+        "trend": {
+            "vijay_sales": [(129999, 124999, 5), (129999, 121999, 2), (129999, 119999, 0)],
+            "reliance_digital": [(129999, 126999, 5), (129999, 122999, 0)],
+        },
+        "offer": {"bank": "HDFC", "text": "10% instant discount up to Rs.5,000 on HDFC Bank Credit Cards", "discount": 5000},
+    },
+    {
+        "raw_name": "Google Pixel 9 Pro 256 GB, Obsidian",
+        "trend": {
+            "vijay_sales": [(99900, 96900, 4), (99900, 94900, 0)],
+            "reliance_digital": [(99900, 97900, 4), (99900, 93900, 0)],
+        },
+        "offer": None,
+    },
+]
 
 
 def seed() -> None:
@@ -25,22 +77,9 @@ def seed() -> None:
             print("Seed data already present - nothing to do.")
             return
 
-        product = Product(brand="Apple", model="iPhone 17 Pro", canonical_name="Apple iPhone 17 Pro")
-        db.session.add(product)
-        db.session.flush()
-
-        variant = Variant(
-            product_id=product.id,
-            storage="256GB",
-            colour="Cosmic Orange",
-            variant_key="apple|iphone 17 pro|256|cosmic orange",
-        )
-        db.session.add(variant)
-        db.session.flush()
-
         crawl_run = CrawlRun(
             crawl_id=SEED_CRAWL_ID,
-            query_json='{"model": "iPhone 17 Pro", "seed": true}',
+            query_json='{"seed": true}',
             started_at=datetime.now(timezone.utc) - timedelta(minutes=1),
             finished_at=datetime.now(timezone.utc),
             sources_attempted=3,
@@ -52,54 +91,57 @@ def seed() -> None:
         db.session.flush()
 
         now = datetime.now(timezone.utc)
-        history = [
-            ("vijay_sales", 132990, 129590, now - timedelta(days=6)),
-            ("reliance_digital", 131900, 128990, now - timedelta(days=6)),
-            ("vijay_sales", 132990, 127990, now - timedelta(days=3)),
-            ("reliance_digital", 131900, 128499, now - timedelta(days=3)),
-            ("vijay_sales", 132990, 126990, now),
-            ("reliance_digital", 131900, 127990, now),
-        ]
+        total_listings = 0
 
-        for source, mrp, selling_price, scraped_at in history:
-            listing = Listing(
-                variant_id=variant.id,
-                source=source,
-                product_name_raw=f"Apple iPhone 17 Pro (256GB Storage, Cosmic Orange) - {source}",
-                sku="245195",
-                product_url=f"https://example.com/{source}/iphone-17-pro",
-                image_url=None,
-                currency="INR",
-                mrp=mrp,
-                selling_price=selling_price,
-                discount=mrp - selling_price,
-                availability="available",
-                seller=source.replace("_", " ").title(),
-                rating=4.5,
-                review_count=120,
-                crawl_id=crawl_run.crawl_id,
-                scraped_at=scraped_at,
-            )
-            db.session.add(listing)
-            db.session.flush()
+        for demo in DEMO_PRODUCTS:
+            parsed = parse_product_name(demo["raw_name"])
+            variant = get_or_create_variant(parsed)
+            slug = parsed.model.lower().replace(" ", "-")
 
-            if scraped_at == now:
-                db.session.add(
-                    Offer(
-                        listing_id=listing.id,
-                        offer_text="10% instant discount up to Rs.4,000 on HDFC Bank Credit Cards",
-                        offer_type="bank",
-                        bank="HDFC",
-                        offer_discount=4000,
-                        emi_available=True,
-                        emi_tenure=12,
-                        emi_rate=0.0,
-                        valid_till_text="Seed demo data",
+            for source, points in demo["trend"].items():
+                for mrp, selling_price, days_ago in points:
+                    scraped_at = now - timedelta(days=days_ago)
+                    listing = Listing(
+                        variant_id=variant.id,
+                        source=source,
+                        product_name_raw=f"{demo['raw_name']} - {source}",
+                        sku=f"seed-{variant.id}",
+                        product_url=f"https://example.com/{source}/{slug}",
+                        currency="INR",
+                        mrp=mrp,
+                        selling_price=selling_price,
+                        discount=mrp - selling_price,
+                        availability="available",
+                        seller=source.replace("_", " ").title(),
+                        rating=4.5,
+                        review_count=120,
+                        crawl_id=crawl_run.crawl_id,
+                        scraped_at=scraped_at,
                     )
-                )
+                    db.session.add(listing)
+                    db.session.flush()
+                    total_listings += 1
+
+                    # Only the most recent scrape carries a live-looking
+                    # offer - older historical points are price-only, same
+                    # as what a real re-scrape would capture.
+                    if demo["offer"] and days_ago == 0:
+                        db.session.add(
+                            Offer(
+                                listing_id=listing.id,
+                                offer_text=demo["offer"]["text"],
+                                offer_type="bank",
+                                bank=demo["offer"]["bank"],
+                                offer_discount=demo["offer"]["discount"],
+                                emi_available=True,
+                                emi_tenure=12,
+                                emi_rate=0.0,
+                                valid_till_text="Seed demo data",
+                            )
+                        )
 
         db.session.commit()
-        print(f"Seeded 1 product, 1 variant, {len(history)} listings under crawl_id={crawl_run.crawl_id}")
+        print(f"Seeded {len(DEMO_PRODUCTS)} product(s), {total_listings} listings under crawl_id={crawl_run.crawl_id}")
 
 
 if __name__ == "__main__":

@@ -175,6 +175,15 @@ def _num(value) -> float | None:
     return float(value) if value is not None else None
 
 
+def _display_source(source: str) -> str:
+    """The API identifies retailers by their internal slug (matches
+    scraper.source_name / SOURCE_ADAPTERS, e.g. "vijay_sales") everywhere
+    it's used as a value - the "source" fields on best_current_price etc.
+    stay that slug so it round-trips with the sources filter. This is only
+    for the "reason" sentence, which is prose meant to be read as-is."""
+    return source.replace("_", " ").title()
+
+
 def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config) -> dict:
     listings = (
         Listing.query.filter_by(crawl_id=crawl_run.crawl_id)
@@ -334,7 +343,7 @@ def _build_recommendation(entries: list[dict]) -> dict | None:
             "tenure_months": lowest_emi_entry["emi"].tenure_months,
         },
         "reason": (
-            f"{best_effective_entry['listing'].source} has the lowest effective price "
+            f"{_display_source(best_effective_entry['listing'].source)} has the lowest effective price "
             f"(Rs.{best_effective_entry['effective_price']:,.0f}) after applicable offers, "
             f"across {len(priced)} matched listing(s) from "
             f"{len({e['listing'].source for e in priced})} source(s)."

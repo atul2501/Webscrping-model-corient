@@ -1,11 +1,15 @@
+import logging
 import os
+import time
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from sqlalchemy import event
 
 from app.config import Config
 from app.extensions import db, migrate
 from app.utils.logging import configure_logging
+
+request_logger = logging.getLogger("app.request")
 
 
 def create_app(config_object=None):
@@ -45,6 +49,36 @@ def create_app(config_object=None):
 
     app.register_blueprint(views_bp)
     app.register_blueprint(api_bp)
+
+    # A full access-log line per request - method, path, status, timing -
+    # independent of the scraper/search-level logging that already happens
+    # deeper in the call stack. Static assets are skipped: they're the vast
+    # majority of requests and add noise, not signal, to an error-hunting log.
+    @app.before_request
+    def _start_request_timer():
+        g._request_start = time.perf_counter()
+
+    @app.after_request
+    def _log_request(response):
+        if not request.path.startswith("/static/"):
+            elapsed_ms = (time.perf_counter() - g.get("_request_start", time.perf_counter())) * 1000
+            level = logging.WARNING if response.status_code >= 400 else logging.INFO
+            request_logger.log(
+                level,
+                "%s %s -> %d (%.0fms)",
+                request.method,
+                request.path,
+                response.status_code,
+                elapsed_ms,
+                extra={
+                    "method": request.method,
+                    "url": request.path,
+                    "status_code": response.status_code,
+                    "elapsed_ms": round(elapsed_ms, 1),
+                    "remote_addr": request.remote_addr,
+                },
+            )
+        return response
 
     # SQLite is the zero-setup local path (spec: "SQLite acceptable"); create
     # tables automatically there so `flask run` works with no extra steps.

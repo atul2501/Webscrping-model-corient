@@ -66,6 +66,41 @@ class _FakeFailingAdapter(BaseAdapter):
         raise RuntimeError("simulated source outage")
 
 
+class _FakePriceDropAdapter(BaseAdapter):
+    """Returns the same SKU/variant at a lower price on each successive
+    call, so two back-to-back crawls land two Listing rows for one Variant
+    at different prices - what the price-history endpoint's drop detection
+    is meant to catch.
+
+    `_call_count` is a *class* attribute, not instance state: search_service
+    builds a fresh adapter instance for every crawl, so instance state alone
+    would reset to call #0 on each search and never reach the second price.
+    Tests using this must reset it (`_FakePriceDropAdapter._call_count = 0`)
+    before use, since it's shared across the whole test session otherwise.
+    """
+
+    source_name = "fake_drop"
+    domain = "fake-drop.example"
+    prices = [129900, 119900]
+    _call_count = 0
+
+    def search(self, query: SearchQuery, crawl_id: str) -> list[RawListing]:
+        price = _FakePriceDropAdapter.prices[min(_FakePriceDropAdapter._call_count, len(_FakePriceDropAdapter.prices) - 1)]
+        _FakePriceDropAdapter._call_count += 1
+        return [
+            RawListing(
+                source=self.source_name,
+                product_name_raw="Apple iPhone 17 Pro (256GB Storage, Black)",
+                sku="SKU-DROP",
+                product_url="https://fake-drop.example/p/1",
+                mrp=139900,
+                selling_price=price,
+                availability="available",
+                seller="Fake Drop",
+            )
+        ]
+
+
 def _patch_registry(monkeypatch, adapters: dict):
     monkeypatch.setattr("app.services.search_service.SOURCE_ADAPTERS", adapters)
 
@@ -191,7 +226,32 @@ def test_product_offers_and_price_history_endpoints(client, monkeypatch):
 
     history_response = client.get(f"/api/price-history/{variant_id}")
     assert history_response.status_code == 200
-    assert len(history_response.get_json()["history"]) == 1
+    history_body = history_response.get_json()
+    assert len(history_body["history"]) == 1
+    assert history_body["product"]["brand"] == "Apple"
+    assert history_body["price_drops"] == []  # a single scrape is never a drop
+
+
+def test_price_drop_detected_across_two_crawls(client, monkeypatch, app):
+    _FakePriceDropAdapter._call_count = 0
+    _patch_registry(monkeypatch, {"fake_drop": _FakePriceDropAdapter})
+    app.config["SEARCH_CACHE_TTL_SECONDS"] = 0  # force a fresh crawl each call, not a cache hit
+
+    first = client.post("/api/search", json={"model": "iPhone 17 Pro"})
+    variant_id = first.get_json()["results"][0]["variant_id"]
+    assert first.get_json()["results"][0]["selling_price"] == 129900
+
+    second = client.post("/api/search", json={"model": "iPhone 17 Pro"})
+    assert second.get_json()["results"][0]["selling_price"] == 119900
+
+    history = client.get(f"/api/price-history/{variant_id}").get_json()
+    assert len(history["history"]) == 2
+    assert len(history["price_drops"]) == 1
+    drop = history["price_drops"][0]
+    assert drop["source"] == "fake_drop"
+    assert drop["previous_price"] == 129900
+    assert drop["current_price"] == 119900
+    assert drop["drop_amount"] == 10000
 
 
 def test_unknown_variant_and_listing_return_404(client):

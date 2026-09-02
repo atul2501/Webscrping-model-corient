@@ -1,8 +1,11 @@
+from dataclasses import asdict
+
 from flask import Blueprint, current_app, jsonify, request
 
 from app.data.model_catalog import get_model_options, suggest_models
 from app.extensions import db
 from app.models import Listing, Product, Variant
+from app.pricing.price_drop import detect_price_drops
 from app.services.search_service import run_search
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -161,22 +164,28 @@ def price_history(variant_id: int):
     if variant is None:
         return jsonify({"error": "not found"}), 404
 
-    history = Listing.query.filter_by(variant_id=variant_id).order_by(Listing.scraped_at.asc()).all()
+    listings = Listing.query.filter_by(variant_id=variant_id).order_by(Listing.scraped_at.asc()).all()
+    history = [
+        {
+            "listing_id": listing.id,
+            "source": listing.source,
+            "selling_price": _num(listing.selling_price),
+            "mrp": _num(listing.mrp),
+            "availability": listing.availability,
+            "scraped_at": listing.scraped_at.isoformat() if listing.scraped_at else None,
+            "crawl_id": listing.crawl_id,
+        }
+        for listing in listings
+    ]
 
     return jsonify(
         {
             "variant_id": variant_id,
-            "history": [
-                {
-                    "listing_id": listing.id,
-                    "source": listing.source,
-                    "selling_price": _num(listing.selling_price),
-                    "mrp": _num(listing.mrp),
-                    "availability": listing.availability,
-                    "scraped_at": listing.scraped_at.isoformat() if listing.scraped_at else None,
-                    "crawl_id": listing.crawl_id,
-                }
-                for listing in history
-            ],
+            "product": {"brand": variant.product.brand, "model": variant.product.model},
+            "variant": {"storage": variant.storage, "colour": variant.colour},
+            "history": history,
+            # Only ever compares a source's own consecutive scrapes against
+            # each other - never one source's price against another's.
+            "price_drops": [asdict(drop) for drop in detect_price_drops(history)],
         }
     )
