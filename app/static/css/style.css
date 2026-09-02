@@ -581,4 +581,11 @@ body {
 @media (max-width: 520px) {
   .search-form { grid-template-columns: 1fr; }
   .container { padding: 20px 16px 56px; }
+  /* .field-budget's grid-column: span 2 (needed for the 2-column tablet
+     layout above) has no 2nd column to span into once the grid drops to a
+     single column here - without this override, CSS Grid creates an
+     implicit 2nd column to satisfy that span anyway, silently reflowing
+     every field back into two narrow, overflowing columns instead of one
+     full-width column per field. */
+  .field-budget { grid-column: span 1; }
 }
