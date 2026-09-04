@@ -110,7 +110,7 @@ building this** (see `tests/fixtures/`), not synthetic markup.
 ### Try a real search
 
 ```bash
-curl -X POST http://localhost:5000/api/search \
+curl -X POST https://webscrping-model-corient-c1ww.onrender.com/api/search \
   -H "Content-Type: application/json" \
   -d '{"model": "iPhone 17 Pro", "storage": "256GB", "emi_tenure_months": 12, "down_payment": 20000}'
 ```
@@ -142,6 +142,12 @@ created in one step:
    db upgrade` running the Alembic migrations against the fresh database).
 4. Once live, `https://<your-service>.onrender.com/health` should return
    `{"status": "ok", "db": "ok"}`.
+
+This repo's own deploy is live at
+[https://webscrping-model-corient-c1ww.onrender.com/](https://webscrping-model-corient-c1ww.onrender.com/)
+(health check: [https://webscrping-model-corient-c1ww.onrender.com/health](https://webscrping-model-corient-c1ww.onrender.com/health)).
+Free tier - the first request after a period of inactivity can take 30-50s
+while the instance spins back up.
 
 What makes this work, specifically:
 - `docker-entrypoint.sh` runs `flask db upgrade` before starting `gunicorn`,
@@ -412,16 +418,18 @@ Matches the spec's endpoint table exactly:
 fixed to hardcode here - run a search, then pull them out of that response:
 
 ```bash
-curl -s -X POST http://localhost:5000/api/search \
+BASE_URL=https://webscrping-model-corient-c1ww.onrender.com
+
+curl -s -X POST $BASE_URL/api/search \
   -H "Content-Type: application/json" \
   -d '{"model": "iPhone 17 Pro"}' > /tmp/search.json
 
 VARIANT_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['variant_id'])")
 LISTING_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['listing_id'])")
 
-curl -s http://localhost:5000/api/product/$VARIANT_ID | python3 -m json.tool
-curl -s http://localhost:5000/api/offers/$LISTING_ID | python3 -m json.tool
-curl -s http://localhost:5000/api/price-history/$VARIANT_ID | python3 -m json.tool
+curl -s $BASE_URL/api/product/$VARIANT_ID | python3 -m json.tool
+curl -s $BASE_URL/api/offers/$LISTING_ID | python3 -m json.tool
+curl -s $BASE_URL/api/price-history/$VARIANT_ID | python3 -m json.tool
 ```
 
 ### Price history chart and price-drop detection
