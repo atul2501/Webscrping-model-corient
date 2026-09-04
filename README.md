@@ -102,7 +102,7 @@ pip install -r requirements-dev.txt
 pytest -v
 ```
 
-All 68 tests run fully offline (mocked HTTP via `responses`, in-memory
+All 76 tests run fully offline (mocked HTTP via `responses`, in-memory
 SQLite) — no network access or live retailer availability required. Several
 of them replay **real HTML/JSON captured live from the target sites while
 building this** (see `tests/fixtures/`), not synthetic markup.
@@ -393,6 +393,16 @@ specifically so that two genuinely different colours or capacities of the
 same phone are never merged just because their model text matches (this was
 caught and fixed during live testing — see
 `test_different_colour_creates_separate_variant_not_fuzzy_merged`).
+
+The boundary-splitting step that turns a genuinely concatenated title like
+`"iphone17pro"` into `"iphone 17 pro"` was, at first, also firing inside
+already-correct short model codes that plenty of Android brands write with
+no space of their own — Samsung's `"S24"`, `"A56"`, `"M14"` and so on —
+turning `"Galaxy A56"` into `"Galaxy A 56"` and splitting what should have
+been one variant into two differently-spelled ones. It now only splits a
+token whose leading letters run to 3+ characters (a real word, not a 1-2
+letter series prefix) — see
+`test_short_model_code_prefix_is_not_split_from_its_digits`.
 
 ## EMI and offer logic
 
