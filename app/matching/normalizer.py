@@ -75,6 +75,7 @@ _MULTI_SPACE_RE = re.compile(r"\s+")
 # Split "iphone17pro" -> "iphone 17 pro", but don't split a digit from a
 # single trailing suffix letter like "17e"/"16e" (real Apple model names).
 _ALPHA_NUM_BOUNDARY_RE = re.compile(r"(?<=[a-zA-Z])(?=\d)|(?<=\d)(?=[a-zA-Z]{2,})")
+_LEADING_ALPHA_RE = re.compile(r"^[a-zA-Z]*")
 _WORD_RE = re.compile(r"[a-zA-Z0-9]+")
 # Some sources (e.g. Vijay Sales' GraphQL search) append a trailing SKU code
 # to the product name, e.g. "... Black) P245180" or even "...Black)P245180"
@@ -182,8 +183,19 @@ def _normalize_model_text(text: str) -> str:
     cleaned = _RAM_RE.sub(" ", cleaned)
     tokens = [t for t in cleaned.split() if t.lower() not in _FILLER_WORDS]
     cleaned = " ".join(tokens)
-    # "iphone17pro" -> "iphone 17 pro"
-    cleaned = _ALPHA_NUM_BOUNDARY_RE.sub(" ", cleaned)
+    # "iphone17pro" -> "iphone 17 pro" - but only within a token whose
+    # leading letters run to 3+ characters (a real word like "iphone").
+    # Applied unconditionally, this also mangled already-correct short
+    # model codes that plenty of Android brands write with no space at all
+    # - Samsung's "S24"/"A56"/"M14" and friends - turning e.g. "Galaxy A56"
+    # into "Galaxy A 56" and breaking catalog/variant matching for them.
+    # Gating per-token on the leading-letter length keeps the intended
+    # "iphone17pro" case (still one token here, since it arrived with zero
+    # internal spaces) while leaving 1-2 letter prefixes alone.
+    cleaned = " ".join(
+        _ALPHA_NUM_BOUNDARY_RE.sub(" ", word) if len(_LEADING_ALPHA_RE.match(word).group()) >= 3 else word
+        for word in cleaned.split()
+    )
     cleaned = _MULTI_SPACE_RE.sub(" ", cleaned).strip()
 
     def _title(word: str) -> str:

@@ -69,6 +69,18 @@ def test_condensed_brand_model_is_still_split_on_boundaries():
     assert "Pro" in parsed.model.split()
 
 
+def test_short_model_code_prefix_is_not_split_from_its_digits():
+    # Regression: many Android brands write their own model codes as one
+    # word with no space - Samsung's "S24"/"A56"/"M14" and so on. The
+    # boundary split meant for genuinely concatenated titles like
+    # "iphone17pro" was previously firing on these too (1-2 letter prefix),
+    # turning "Galaxy A56" into "Galaxy A 56" and breaking matching against
+    # anything else that spelled it the normal way.
+    parsed = parse_product_name("Samsung Galaxy A56 5G (256GB Storage, 8 GB RAM), Awesome Graphite, Mobile Phone")
+    assert "A56" in parsed.model.split()
+    assert "A 56" not in parsed.model
+
+
 def test_same_listing_from_two_sources_yields_same_variant_key():
     a = parse_product_name("Apple iPhone 17 Pro (256GB Storage, Cosmic Orange)")
     b = parse_product_name("Apple iPhone 17 Pro (256GB Storage, Cosmic Orange) P245195")
