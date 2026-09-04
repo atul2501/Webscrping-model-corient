@@ -112,7 +112,55 @@ building this** (see `tests/fixtures/`), not synthetic markup.
 ```bash
 curl -X POST https://webscrping-model-corient-c1ww.onrender.com/api/search \
   -H "Content-Type: application/json" \
-  -d '{"model": "iPhone 17 Pro", "storage": "256GB", "emi_tenure_months": 12, "down_payment": 20000}'
+  -d '{"model": "Redmi Note 15 Pro", "emi_tenure_months": 12, "down_payment": 5000}'
+```
+
+This one's picked deliberately: on the live deploy, it reliably comes back
+with 15+ matched variants, a full price/EMI ranking, and a recommendation —
+a better first impression than a query that only clears one source. `iPhone
+17 Pro` works the same way locally, and still makes a fine example there —
+see [Deploying to Render](#deploying-to-render) further down for why
+Apple-model queries specifically are hit-or-miss from the live instance.
+
+Response shape (real output, `results` trimmed from 17 down to one entry —
+`emi`, `offers` and `recommendation` are the fields worth looking at):
+
+```jsonc
+{
+  "crawl_id": "c006768c844e42d9af2833376ab36329",
+  "page": 1,
+  "query": { "model": "Redmi Note 15 Pro", "storage": null, "colour": null, "budget_min": null, "budget_max": null },
+  "emi_assumptions": {
+    "tenure_months": 12, "down_payment": 5000.0, "annual_rate_percent": 14.0,
+    "note": "EMI figures are calculated estimates, not scraped facts."
+  },
+  "sources_attempted": 3, "sources_succeeded": 1, "sources_failed": 2,
+  "results": [
+    {
+      "listing_id": 45, "variant_id": 21, "source": "vijay_sales",
+      "product": { "brand": "Xiaomi", "model": "Redmi Note 15 Pro" },
+      "variant": { "storage": "128GB", "colour": "Carbon Black" },
+      "product_name": "Redmi Note 15 Pro 5G (8GB RAM, 128GB Storage) ... (Carbon Black) P251813",
+      "product_url": "https://www.vijaysales.com/p/P251813/redmi-note-15-pro-...",
+      "mrp": 31999.0, "selling_price": 31999.0, "effective_price": 31999.0,
+      "availability": "available", "deal_score": 80.0,
+      "offers": [],
+      "emi": {
+        "tenure_months": 12, "annual_rate_percent": 14.0, "monthly_emi": 2424.16,
+        "total_repayment": 29089.95, "total_interest": 2090.95,
+        "is_no_cost_emi": false, "estimate": true
+      },
+      "scraped_at": "2026-09-04T11:43:56.968690"
+    }
+    // ...16 more, sorted by effective_price ascending
+  ],
+  "recommendation": {
+    "best_current_price": { "source": "vijay_sales", "amount": 31999.0 },
+    "best_effective_price": { "source": "vijay_sales", "amount": 31999.0 },
+    "lowest_emi": { "source": "vijay_sales", "monthly_emi": 2424.16, "tenure_months": 12 },
+    "reason": "Vijay Sales has the lowest effective price (Rs.31,999) after applicable offers, across 17 matched listing(s) from 1 source(s)."
+  }
+}
 ```
 
 Or generate the committed sample output yourself:
@@ -447,7 +495,7 @@ BASE_URL=https://webscrping-model-corient-c1ww.onrender.com
 
 curl -s -X POST $BASE_URL/api/search \
   -H "Content-Type: application/json" \
-  -d '{"model": "iPhone 17 Pro"}' > /tmp/search.json
+  -d '{"model": "Redmi Note 15 Pro"}' > /tmp/search.json
 
 VARIANT_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['variant_id'])")
 LISTING_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['listing_id'])")
@@ -455,6 +503,50 @@ LISTING_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))[
 curl -s $BASE_URL/api/product/$VARIANT_ID | python3 -m json.tool
 curl -s $BASE_URL/api/offers/$LISTING_ID | python3 -m json.tool
 curl -s $BASE_URL/api/price-history/$VARIANT_ID | python3 -m json.tool
+```
+
+Real output shape for each (from the same live listing, `listing_id` swapped
+to one that actually carries bank offers for the middle example):
+
+```jsonc
+// GET /api/product/21
+{
+  "variant_id": 21,
+  "product": { "brand": "Xiaomi", "model": "Redmi Note 15 Pro" },
+  "variant": { "storage": "128GB", "colour": "Carbon Black" },
+  "latest_listings": [
+    {
+      "listing_id": 51, "source": "vijay_sales",
+      "product_name": "Redmi Note 15 Pro 5G (8GB RAM, 128GB Storage) ... Carbon Black",
+      "mrp": 31999.0, "selling_price": 31999.0, "availability": "available",
+      "seller": "Vijay Sales", "rating": 5.0, "review_count": 1, "offers": []
+    }
+  ]
+}
+
+// GET /api/offers/47  (a different listing - one with real bank offers attached)
+{
+  "listing_id": 47, "source": "vijay_sales", "selling_price": 41999.0,
+  "offers": [
+    {
+      "bank": "AU Small Finance Bank", "offer_type": "no_cost_emi", "emi_available": true,
+      "offer_text": "No-cost / low-cost EMI conversion available via AU Small Finance Bank (bank terms apply)"
+    }
+    // ...4 more banks
+  ]
+}
+
+// GET /api/price-history/21
+{
+  "variant_id": 21,
+  "product": { "brand": "Xiaomi", "model": "Redmi Note 15 Pro" },
+  "variant": { "storage": "128GB", "colour": "Carbon Black" },
+  "history": [
+    { "listing_id": 45, "source": "vijay_sales", "selling_price": 31999.0, "mrp": 31999.0, "availability": "available", "scraped_at": "2026-09-04T11:43:56Z" }
+    // ...one row per past scrape, oldest first
+  ],
+  "price_drops": []
+}
 ```
 
 ### Price history chart and price-drop detection
