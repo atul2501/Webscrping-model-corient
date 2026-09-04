@@ -149,6 +149,13 @@ This repo's own deploy is live at
 Free tier - the first request after a period of inactivity can take 30-50s
 while the instance spins back up.
 
+Everything else about the deployed instance behaves normally. One thing to
+note: Reliance Digital may not return results there, because the free
+tier's hosting region is Singapore and Reliance Digital's bot-protection
+appears to treat that IP range more strictly than an Indian residential
+one. Running the app locally does not hit this - Reliance Digital works
+normally there.
+
 What makes this work, specifically:
 - `docker-entrypoint.sh` runs `flask db upgrade` before starting `gunicorn`,
   and binds to `$PORT` (Render assigns this dynamically — a hardcoded port
