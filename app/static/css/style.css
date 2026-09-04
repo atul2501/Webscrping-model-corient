@@ -432,6 +432,25 @@ body {
 }
 .empty-state strong { display: block; color: var(--text-soft); font-size: 15px; margin-bottom: 4px; }
 
+/* Same reasoning as .status[hidden] above: without this, the rule below's
+   own `display: flex` overrides the browser's `[hidden]` default, so the
+   button stays visible even while the wrap has the `hidden` attribute. */
+.load-more-wrap[hidden] { display: none; }
+.load-more-wrap { display: flex; justify-content: center; margin-top: 18px; }
+#load-more-button {
+  background: #fff;
+  color: var(--brand);
+  border: 1.5px solid var(--brand);
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+#load-more-button:hover { background: var(--brand); color: #fff; }
+#load-more-button:disabled { opacity: 0.6; cursor: default; }
+
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }

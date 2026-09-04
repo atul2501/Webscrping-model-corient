@@ -406,6 +406,24 @@ Matches the spec's endpoint table exactly:
 | `GET /api/offers/<listing_id>` | Offers/EMI-relevant facts for one listing |
 | `GET /api/price-history/<variant_id>` | All scraped price points for a variant, oldest to newest, plus detected price drops |
 
+### Trying the ID-based endpoints
+
+`variant_id`/`listing_id` are assigned at scrape time, so there's nothing
+fixed to hardcode here - run a search, then pull them out of that response:
+
+```bash
+curl -s -X POST http://localhost:5000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"model": "iPhone 17 Pro"}' > /tmp/search.json
+
+VARIANT_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['variant_id'])")
+LISTING_ID=$(python3 -c "import json; print(json.load(open('/tmp/search.json'))['results'][0]['listing_id'])")
+
+curl -s http://localhost:5000/api/product/$VARIANT_ID | python3 -m json.tool
+curl -s http://localhost:5000/api/offers/$LISTING_ID | python3 -m json.tool
+curl -s http://localhost:5000/api/price-history/$VARIANT_ID | python3 -m json.tool
+```
+
 ### Price history chart and price-drop detection
 
 `GET /api/price-history/<variant_id>` also returns `price_drops`: for each

@@ -60,10 +60,13 @@ MODEL_COLLECTION_SLUGS: list[tuple[str, str]] = [
 
 # Broader, brand-wide fallback collections - tried after a specific model
 # slug misses (or when there isn't one), before falling all the way back to
-# the fully generic, all-brands page. Not every brand has a working one
-# (several checked while building this 404 or redirect to an empty page,
-# e.g. Xiaomi/Vivo/Oppo's are currently marketing redirects with no product
-# cards) - an untried/unlisted brand just skips straight to the generic page.
+# the fully generic, all-brands page. Not every brand has a working one -
+# e.g. Nokia/Motorola/Itel's "-mobiles" collection pages return 200 but
+# render their product grid client-side (no cards in the static HTML this
+# adapter fetches), so they're deliberately left out here rather than added
+# as dead weight - an untried/unlisted brand just skips straight to the
+# generic page. Vivo/Oppo/Redmi/Jio's "-mobiles" pages, by contrast, are
+# genuinely server-rendered with real product cards - verified live.
 BRAND_FALLBACK_SLUGS: list[tuple[str, str]] = [
     ("iphone", "apple-smartphones"),
     ("apple", "apple-smartphones"),
@@ -71,6 +74,11 @@ BRAND_FALLBACK_SLUGS: list[tuple[str, str]] = [
     ("galaxy", "samsung-smartphones"),
     ("oneplus", "oneplus-smartphones"),
     ("realme", "realme-smartphones"),
+    ("vivo", "vivo-mobiles"),
+    ("oppo", "oppo-mobiles"),
+    ("redmi", "redmi-mobiles"),
+    ("xiaomi", "redmi-mobiles"),
+    ("jio", "jio-mobiles"),
 ]
 
 # Every collection slug this adapter knows about, for the full-catalog
@@ -110,6 +118,15 @@ class RelianceDigitalAdapter(BaseAdapter):
     domain = "www.reliancedigital.in"
 
     def search(self, query: SearchQuery, crawl_id: str) -> list[RawListing]:
+        if query.page > 1:
+            # Every tier here is a single static page - there's no query-
+            # string pagination to follow (robots.txt disallows it outright,
+            # see the module docstring), so a page > 1 request would just
+            # re-fetch and re-return the exact same listings page 1 already
+            # gave. Returning nothing lets "Load more" correctly treat this
+            # source as exhausted after page 1 instead of duplicating rows.
+            return []
+
         last_error: Exception | None = None
         any_tier_succeeded = False
         for url in _candidate_urls(query.model):

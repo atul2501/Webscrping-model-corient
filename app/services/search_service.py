@@ -27,23 +27,33 @@ def _utcnow() -> datetime:
 
 
 def run_search(params: dict, config) -> dict:
+    page = int(params.get("page") or 1)
     query = SearchQuery(
         model=params["model"],
         storage=params.get("storage"),
         colour=params.get("colour"),
         budget_min=params.get("budget_min"),
         budget_max=params.get("budget_max"),
+        page=page,
     )
     requested_sources = params.get("sources") or list(SOURCE_ADAPTERS.keys())
     requested_sources = [s for s in requested_sources if s in SOURCE_ADAPTERS]
 
+    # Only model + sources + page affect what actually gets scraped - none of
+    # the three adapters read storage/colour/budget when fetching (they
+    # filter by model text only; storage/colour/budget are applied
+    # afterwards, in build_response, against whatever was scraped). Keying
+    # the cache on those too meant picking a model (auto-search, no budget)
+    # and then hitting Search (same model, current budget slider values)
+    # missed the cache and re-ran a full live crawl of the same three sites
+    # for listings already sitting in the DB from seconds earlier. `page` is
+    # included because it's the one param that *does* change what gets
+    # scraped (see VijaySalesAdapter.search) - without it, "Load more"
+    # (page=2) would collide in the cache with the original page=1 search.
     cache_key = {
         "model": query.model.lower().strip(),
-        "storage": (query.storage or "").lower().strip(),
-        "colour": (query.colour or "").lower().strip(),
-        "budget_min": query.budget_min,
-        "budget_max": query.budget_max,
         "sources": sorted(requested_sources),
+        "page": page,
     }
 
     cached_crawl_id = get_cached_crawl_id(cache_key, config["SEARCH_CACHE_TTL_SECONDS"])
@@ -249,6 +259,7 @@ def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config
             "budget_min": query.budget_min,
             "budget_max": query.budget_max,
         },
+        "page": query.page,
         "emi_assumptions": {
             "tenure_months": tenure_months,
             "down_payment": down_payment,

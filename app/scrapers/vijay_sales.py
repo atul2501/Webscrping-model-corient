@@ -40,36 +40,12 @@ ACCESSORY_KEYWORDS = (
 BANK_LOGO_TEXT_RE = re.compile(r"bankLogoText&#34;:&#34;([^&]+?)&#34;")
 
 MAX_OFFER_DETAIL_FETCHES = 5
-PAGE_SIZE = 24
+PAGE_SIZE = 30
 
-GRAPHQL_QUERY = """
-query Search($search: String!, $pageSize: Int!) {
-  products(search: $search, pageSize: $pageSize) {
-    total_count
-    items {
-      name
-      sku
-      url_key
-      stock_status
-      categories { url_key }
-      rating_summary
-      review_count
-      small_image { url }
-      price_range {
-        minimum_price {
-          regular_price { value }
-          final_price { value }
-          discount { amount_off percent_off }
-        }
-      }
-    }
-  }
-}
-"""
-
-# Same shape as GRAPHQL_QUERY, plus pagination - used by the full-catalog
-# crawler (scripts/crawl_full_catalog.py), not by a normal per-search fetch,
-# which only ever needs the first page of results.
+# Paginated GraphQL search - shared by both a live /api/search request
+# (search() below, one page at a time as the user clicks "Load more") and
+# the full-catalog crawler (scripts/crawl_full_catalog.py, which sweeps
+# every page up front).
 GRAPHQL_CATALOG_QUERY = """
 query Search($search: String!, $pageSize: Int!, $currentPage: Int!) {
   products(search: $search, pageSize: $pageSize, currentPage: $currentPage) {
@@ -102,13 +78,7 @@ class VijaySalesAdapter(BaseAdapter):
     domain = "www.vijaysales.com"
 
     def search(self, query: SearchQuery, crawl_id: str) -> list[RawListing]:
-        params = {
-            "query": GRAPHQL_QUERY,
-            "variables": json.dumps({"search": query.model, "pageSize": PAGE_SIZE}),
-        }
-        result = self.get(GRAPHQL_URL, params=params, crawl_id=crawl_id)
-        payload = json.loads(result.text)
-        items = ((payload.get("data") or {}).get("products") or {}).get("items") or []
+        items, _total_pages = self.fetch_catalog_page(query.model, query.page, crawl_id, page_size=PAGE_SIZE)
 
         listings: list[RawListing] = []
         for item in items:
@@ -130,11 +100,11 @@ class VijaySalesAdapter(BaseAdapter):
 
     def fetch_catalog_page(self, search_term: str, page: int, crawl_id: str, page_size: int = 100) -> tuple[list[dict], int]:
         """One page of raw GraphQL product items for `search_term`, plus the
-        total page count - used by the full-catalog crawler to page through
-        an entire category rather than just the first page a live search
-        needs. Accessory filtering is deliberately left to the caller here
-        (unlike `search()`), since the crawler wants to look at every item
-        this endpoint returns for bookkeeping/dedup before deciding.
+        total page count - shared by `search()` (one page per "Load more"
+        click) and the full-catalog crawler (which sweeps every page up
+        front). Accessory filtering is deliberately left to the caller here,
+        since the crawler wants to look at every item this endpoint returns
+        for bookkeeping/dedup before deciding.
         """
 
         params = {

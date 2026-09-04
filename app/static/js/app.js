@@ -22,11 +22,20 @@ const historyModalOverlay = document.getElementById("history-modal-overlay");
 const historyModalSubtitle = document.getElementById("history-modal-subtitle");
 const historyModalBody = document.getElementById("history-modal-body");
 const historyModalClose = document.getElementById("history-modal-close");
+const loadMoreWrap = document.getElementById("load-more-wrap");
+const loadMoreButton = document.getElementById("load-more-button");
 
 // Holds the last real (live-scraped) search response, so picking a
 // Storage/Colour option after a search can re-filter the table instantly
 // client-side instead of re-hitting the sources.
 let lastModelSearch = null;
+
+// The exact payload of the search currently on screen (model/storage/
+// colour/budget/EMI/sources, no `page`) and how many pages of it have been
+// loaded so far - "Load more" reissues this same payload with page + 1 and
+// appends, rather than replacing, what's already in lastModelSearch.
+let lastSearchPayload = null;
+let currentPage = 1;
 
 // Bumped on every async action that touches #status (the fast model-options
 // lookup, and the slow live search). Whichever one started *last* wins the
@@ -560,6 +569,9 @@ async function executeSearch(payload) {
   table.hidden = true;
   emptyStateEl.hidden = true;
   recommendationEl.hidden = true;
+  loadMoreWrap.hidden = true;
+  lastSearchPayload = payload;
+  currentPage = 1;
 
   try {
     const response = await fetch("/api/search", {
@@ -593,10 +605,74 @@ async function executeSearch(payload) {
     renderRows(filtered);
     renderRecommendation(computeRecommendation(filtered), data);
     statusEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    loadMoreWrap.hidden = false;
+    loadMoreButton.disabled = false;
+    loadMoreButton.textContent = "Load more results";
   } catch (err) {
     if (myToken === requestToken) setStatus("Network error: " + err.message, true);
   }
 }
+
+// Only VijaySalesAdapter can actually honour page > 1 (see SearchQuery.page
+// in app/scrapers/base.py) - Croma/Reliance Digital return [] for it rather
+// than re-returning page 1's own rows. Rather than the frontend having to
+// know which source(s) support paging, a click just asks for the next page
+// and, if nothing new comes back, treats that as "exhausted" and hides
+// itself - one harmless extra request in the worst case.
+async function loadMoreResults() {
+  if (!lastModelSearch || !lastSearchPayload) return;
+  const myToken = ++requestToken;
+
+  loadMoreButton.disabled = true;
+  loadMoreButton.textContent = "Loading...";
+
+  try {
+    const response = await fetch("/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...lastSearchPayload, page: currentPage + 1 }),
+    });
+    const data = await response.json();
+    if (myToken !== requestToken) return; // a new search/lookup started while this was in flight
+
+    if (!response.ok || !data.results.length) {
+      // Exhausted (or the request failed) - hide the button outright rather
+      // than swap in a "no more results" message, so the UI never draws
+      // attention to a dead end the user didn't ask about.
+      loadMoreButton.disabled = false;
+      loadMoreWrap.hidden = true;
+      return;
+    }
+
+    currentPage += 1;
+
+    // A row can only appear once per listing_id (each is a distinct scrape
+    // row) - dedup defensively in case a later page's ordering shifts and
+    // re-surfaces something page 1 already had.
+    const seen = new Set(lastModelSearch.results.map((r) => r.listing_id));
+    const newRows = data.results.filter((r) => !seen.has(r.listing_id));
+    lastModelSearch.results = lastModelSearch.results
+      .concat(newRows)
+      .sort((a, b) => {
+        if (a.effective_price === null) return 1;
+        if (b.effective_price === null) return -1;
+        return a.effective_price - b.effective_price;
+      });
+
+    const filtered = getFilteredResults();
+    renderRows(filtered);
+    renderRecommendation(computeRecommendation(filtered), lastModelSearch);
+    setStatus(`Showing ${filtered.length} of ${lastModelSearch.results.length} listing(s) matching your filters.`, false);
+
+    loadMoreButton.disabled = false;
+    loadMoreButton.textContent = "Load more results";
+  } catch (err) {
+    loadMoreButton.disabled = false;
+    loadMoreButton.textContent = "Load more results";
+  }
+}
+
+loadMoreButton.addEventListener("click", loadMoreResults);
 
 // Storage/Colour/Budget narrow the row set; EMI Tenure/Down Payment don't
 // remove any rows but do change the EMI figure shown for each one - all of
@@ -628,8 +704,21 @@ function getFilteredResults() {
 
   return lastModelSearch.results
     .filter((r) => {
-      if (storage && r.variant.storage !== storage) return false;
-      if (colour && r.variant.colour !== colour) return false;
+      // Substring match, not exact equality - mirrors the backend's own
+      // _passes_filters() (app/services/search_service.py). The Storage/
+      // Colour dropdowns are populated from a small static catalog
+      // (app/data/model_catalog.py) that only has a handful of models
+      // hand-curated with real values; everything else falls back to a
+      // generic placeholder list ("Black", "Blue", ...) that's never going
+      // to equal a real scraped colour verbatim ("Carbon Black", "Mirage
+      // Blue"). An exact-equality filter here silently dropped every
+      // matching row the moment a user picked a colour for any
+      // non-curated model - substring matching is what actually lines up
+      // with how the backend already filters the same data.
+      const storageText = (r.variant.storage || "").toLowerCase().replace(/\s+/g, "");
+      const colourText = (r.variant.colour || "").toLowerCase();
+      if (storage && !storageText.includes(storage.toLowerCase().replace(/\s+/g, ""))) return false;
+      if (colour && !colourText.includes(colour.toLowerCase())) return false;
       if (sourceFilterActive && !selectedSources.includes(r.source)) return false;
       if (budgetMin !== null && (r.selling_price === null || r.selling_price < budgetMin)) return false;
       if (budgetMax !== null && (r.selling_price === null || r.selling_price > budgetMax)) return false;

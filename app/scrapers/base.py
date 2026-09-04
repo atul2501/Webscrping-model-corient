@@ -27,6 +27,11 @@ class SearchQuery:
     colour: str | None = None
     budget_min: float | None = None
     budget_max: float | None = None
+    # 1-indexed. Only VijaySalesAdapter can actually honour page > 1 (its
+    # GraphQL search supports real pagination) - Croma/Reliance Digital fetch
+    # a single fixed page per query and return no extra listings for page > 1
+    # rather than re-returning (and duplicating) page 1's results.
+    page: int = 1
 
 
 @dataclass

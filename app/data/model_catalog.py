@@ -102,7 +102,7 @@ def get_model_options(model: str) -> dict[str, list[str]]:
             return {"storage": storage, "colour": colour}
 
     for name, (storage, colour) in MODEL_SPECS.items():
-        if name.lower() in normalized or normalized in name.lower():
+        if name.lower() in normalized:
             return {"storage": storage, "colour": colour}
 
     return {"storage": GENERIC_STORAGE_OPTIONS, "colour": GENERIC_COLOUR_OPTIONS}

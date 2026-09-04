@@ -54,6 +54,12 @@ class CromaAdapter(BaseAdapter):
     domain = "www.croma.com"
 
     def search(self, query: SearchQuery, crawl_id: str) -> list[RawListing]:
+        if query.page > 1:
+            # LISTING_URL is one fixed, unpaginated page - a page > 1 fetch
+            # would just re-parse and re-return page 1's own listings, so
+            # "Load more" treats this source as exhausted after page 1.
+            return []
+
         result = self.get(LISTING_URL, crawl_id=crawl_id)
         soup = BeautifulSoup(result.text, "lxml")
 

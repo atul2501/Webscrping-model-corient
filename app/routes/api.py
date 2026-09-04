@@ -110,6 +110,7 @@ def search():
         "down_payment": payload.get("down_payment"),
         "emi_annual_rate_percent": payload.get("emi_annual_rate_percent"),
         "sources": payload.get("sources"),
+        "page": payload.get("page"),
     }
 
     try:
