@@ -156,6 +156,14 @@ appears to treat that IP range more strictly than an Indian residential
 one. Running the app locally does not hit this - Reliance Digital works
 normally there.
 
+A second, narrower one: on the deployed instance, Vijay Sales returns
+results normally for every brand except Apple/iPhone. Vijay Sales' own
+catalogue clearly has iPhone stock (confirmed directly against their API),
+so this isn't missing inventory - it looks like Apple-specific
+anti-scraping protection (common industry-wide, tied to MAP-style reseller
+agreements) that other brands aren't subject to. Locally, iPhone searches
+on Vijay Sales work fine.
+
 What makes this work, specifically:
 - `docker-entrypoint.sh` runs `flask db upgrade` before starting `gunicorn`,
   and binds to `$PORT` (Render assigns this dynamically — a hardcoded port
