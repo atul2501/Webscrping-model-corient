@@ -172,8 +172,10 @@ python scripts/export_sample_output.py "iPhone 17 Pro" --storage 256GB
 
 `sample_output/` also has a second, broader example (`comparison_iphone_16.*`,
 genuinely returning results from both Vijay Sales and Reliance Digital at
-once) and `sample_output/screenshots/` has the search form and a rendered
-comparison table, captured from a real run against live sources.
+once), captured from a real run against live sources:
+
+![Search form](sample_output/screenshots/search_form.png)
+![Ranked comparison table with EMI and deal score](sample_output/screenshots/comparison_results.png)
 
 ## Deploying to Render
 
@@ -550,6 +552,8 @@ to one that actually carries bank offers for the middle example):
 ```
 
 ### Price history chart and price-drop detection
+
+![Price history modal for Apple iPhone 17, 256GB, Black — a real Reliance Digital price drop from Rs.82,900 to Rs.62,990 across six scrapes](sample_output/screenshots/price_history_iphone17_256gb_black.png)
 
 `GET /api/price-history/<variant_id>` also returns `price_drops`: for each
 source independently, `app/pricing/price_drop.py` compares that source's
