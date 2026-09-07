@@ -60,17 +60,46 @@ def _find_fuzzy_variant(parsed: ParsedProduct) -> Variant | None:
     return None
 
 
-def get_or_create_variant(parsed: ParsedProduct) -> Variant:
+def prefetch_variants(variant_keys) -> dict[str, Variant]:
+    """Bulk-load existing Variant rows for a batch of variant_keys in a
+    single query. A caller persisting many listings at once (a live search's
+    results, or a full-catalog crawl's hundreds) can pass the result here as
+    `cache` to get_or_create_variant, turning what would otherwise be one
+    exact-match query per listing into a single query for every listing
+    whose product has already been seen before.
+    """
+
+    keys = {k for k in variant_keys if k}
+    if not keys:
+        return {}
+    variants = Variant.query.filter(Variant.variant_key.in_(keys)).all()
+    return {v.variant_key: v for v in variants}
+
+
+def get_or_create_variant(parsed: ParsedProduct, cache: dict[str, Variant] | None = None) -> Variant:
     """Idempotently resolve a ParsedProduct to a Variant row, creating
     Product/Variant rows on first sight of a given brand/model/storage/colour.
+
+    `cache` is an optional variant_key -> Variant map, typically the result
+    of `prefetch_variants` for the whole batch this call is part of - an
+    exact-key hit is served from it with no query, and any row this call
+    resolves (fuzzy-matched or newly created) is written back into it so a
+    later duplicate in the same batch also skips the query.
     """
+
+    if cache is not None and parsed.variant_key in cache:
+        return cache[parsed.variant_key]
 
     existing = Variant.query.filter_by(variant_key=parsed.variant_key).first()
     if existing is not None:
+        if cache is not None:
+            cache[parsed.variant_key] = existing
         return existing
 
     fuzzy_match = _find_fuzzy_variant(parsed)
     if fuzzy_match is not None:
+        if cache is not None:
+            cache[parsed.variant_key] = fuzzy_match
         return fuzzy_match
 
     product = Product.query.filter_by(brand=parsed.brand, model=parsed.model).first()
@@ -87,4 +116,6 @@ def get_or_create_variant(parsed: ParsedProduct) -> Variant:
     )
     db.session.add(variant)
     db.session.flush()
+    if cache is not None:
+        cache[parsed.variant_key] = variant
     return variant

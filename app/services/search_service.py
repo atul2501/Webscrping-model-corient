@@ -12,8 +12,8 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import contains_eager, joinedload
 
 from app.extensions import db
-from app.matching.matcher import get_or_create_variant
-from app.matching.normalizer import parse_product_name
+from app.matching.matcher import get_or_create_variant, prefetch_variants
+from app.matching.normalizer import ParsedProduct, parse_product_name
 from app.models import CrawlRun, Listing, Offer, Product, Variant
 from app.pricing.deal_score import DealScoreInputs, calculate_deal_score
 from app.pricing.emi import calculate_emi, effective_price
@@ -92,9 +92,11 @@ def _run_crawl(requested_sources: list[str], query: SearchQuery, cache_key: dict
     db.session.add(crawl_run)
     db.session.flush()
 
-    for result in results:
-        for raw_listing in result.listings:
-            _persist_listing(raw_listing, crawl_id)
+    raw_listings = [raw for result in results for raw in result.listings]
+    parsed_listings = [(raw, _parse_listing(raw)) for raw in raw_listings]
+    variant_cache = prefetch_variants(parsed.variant_key for _, parsed in parsed_listings)
+    for raw, parsed in parsed_listings:
+        _persist_listing(raw, crawl_id, parsed=parsed, cache=variant_cache)
 
     succeeded = sum(1 for r in results if r.ok)
     crawl_run.finished_at = _utcnow()
@@ -122,14 +124,25 @@ def _dispatch(adapters, query: SearchQuery, crawl_id: str, max_workers: int) -> 
     return results
 
 
-def _persist_listing(raw: RawListing, crawl_id: str) -> None:
-    parsed = parse_product_name(
+def _parse_listing(raw: RawListing) -> ParsedProduct:
+    return parse_product_name(
         raw.product_name_raw,
         colour_hint=raw.colour_hint,
         storage_hint=raw.storage_hint,
         brand_hint=raw.brand_hint,
     )
-    variant = get_or_create_variant(parsed)
+
+
+def _persist_listing(
+    raw: RawListing,
+    crawl_id: str,
+    *,
+    parsed: ParsedProduct | None = None,
+    cache: dict[str, Variant] | None = None,
+) -> None:
+    if parsed is None:
+        parsed = _parse_listing(raw)
+    variant = get_or_create_variant(parsed, cache=cache)
 
     listing = Listing(
         variant_id=variant.id,

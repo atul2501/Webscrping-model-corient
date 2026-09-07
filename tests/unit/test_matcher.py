@@ -1,5 +1,8 @@
-from app.matching.matcher import get_or_create_variant
+from unittest.mock import MagicMock
+
+from app.matching.matcher import get_or_create_variant, prefetch_variants
 from app.matching.normalizer import parse_product_name
+from app.models import Variant
 
 
 def test_get_or_create_variant_is_idempotent_for_exact_variant_key(app, db):
@@ -41,3 +44,48 @@ def test_different_storage_creates_separate_variant(app, db):
     db.session.commit()
     assert v256.id != v512.id
     assert v256.product_id == v512.product_id
+
+
+def test_prefetch_variants_finds_existing_rows_by_key(app, db):
+    parsed = parse_product_name("Apple iPhone 17 Pro (256GB Storage, Black)")
+    created = get_or_create_variant(parsed)
+    db.session.commit()
+
+    prefetched = prefetch_variants([parsed.variant_key, "brand|missing|unknown|any"])
+    assert prefetched == {parsed.variant_key: created}
+
+
+def test_prefetch_variants_empty_input_does_not_query(app, db):
+    assert prefetch_variants([]) == {}
+
+
+def test_get_or_create_variant_uses_cache_hit_without_querying(app, db, monkeypatch):
+    parsed = parse_product_name("Apple iPhone 17 Pro (256GB Storage, Black)")
+    created = get_or_create_variant(parsed)
+    db.session.commit()
+
+    cache = {parsed.variant_key: created}
+
+    # Variant.query is normally Flask-SQLAlchemy's _QueryProperty descriptor;
+    # replacing it outright with a plain MagicMock means any access to
+    # Variant.query (i.e. any attempt to run a query) raises, proving the
+    # cache hit below is served without touching the DB at all.
+    exploding_query = MagicMock()
+    exploding_query.filter_by.side_effect = AssertionError("must not query the DB on a cache hit")
+    monkeypatch.setattr(Variant, "query", exploding_query)
+
+    assert get_or_create_variant(parsed, cache=cache) is created
+
+
+def test_get_or_create_variant_writes_new_rows_back_into_cache(app, db):
+    parsed = parse_product_name("Apple iPhone 17 Pro (256GB Storage, Black)")
+    cache: dict = {}
+
+    first = get_or_create_variant(parsed, cache=cache)
+    db.session.commit()
+    assert cache[parsed.variant_key] is first
+
+    # A second, textually-identical listing in the same batch must reuse the
+    # cached row rather than issuing another query or creating a duplicate.
+    second = get_or_create_variant(parsed, cache=cache)
+    assert second.id == first.id

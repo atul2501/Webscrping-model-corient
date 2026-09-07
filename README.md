@@ -3,7 +3,8 @@
 A Flask application that takes a mobile-phone query, scrapes multiple Indian
 retail sources, matches the same product/variant across them, extracts price
 and offer data, computes EMI scenarios, and returns a ranked "best deal"
-comparison — built to the spec in `Ecommerce_Price_Intelligence_Technical_Test.pdf`.
+comparison — built to the provided E-commerce Price Intelligence technical-test
+specification.
 
 ## What does this project actually do? (explained with zero jargon)
 

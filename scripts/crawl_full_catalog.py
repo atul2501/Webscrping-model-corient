@@ -55,8 +55,9 @@ from app.scrapers.croma import CromaAdapter
 from app.scrapers.reliance_digital import ALL_CATALOG_COLLECTION_SLUGS
 from app.scrapers.reliance_digital import BASE_URL as RD_BASE_URL
 from app.scrapers.reliance_digital import RelianceDigitalAdapter
+from app.matching.matcher import prefetch_variants
 from app.scrapers.vijay_sales import VijaySalesAdapter
-from app.services.search_service import _persist_listing
+from app.services.search_service import _parse_listing, _persist_listing
 
 VIJAY_SALES_CATALOG_SEARCH_TERMS = ["smartphone", "mobile phone"]
 
@@ -174,8 +175,15 @@ def main() -> None:
             # DB write starts here, and this source's writes are one tight
             # transaction - same reasoning as search_service._run_crawl: never
             # hold a write transaction open across slow network I/O.
-            for raw in listings:
-                _persist_listing(raw, crawl_id)
+            # Parse the whole batch up front and prefetch existing Variant
+            # rows for it in one query, instead of one exact-match query per
+            # listing - at this script's scale (hundreds of listings per
+            # source) that's the difference between hundreds of round trips
+            # and one, for every listing whose product has already been seen.
+            parsed_listings = [(raw, _parse_listing(raw)) for raw in listings]
+            variant_cache = prefetch_variants(parsed.variant_key for _, parsed in parsed_listings)
+            for raw, parsed in parsed_listings:
+                _persist_listing(raw, crawl_id, parsed=parsed, cache=variant_cache)
             db.session.commit()
 
             total_persisted += len(listings)
