@@ -98,11 +98,11 @@ For production, this deploys to Render (Postgres, `Dockerfile`-based) — see
 ### Run the tests
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pytest -v
 ```
 
-All 76 tests run fully offline (mocked HTTP via `responses`, in-memory
+All 80 tests run fully offline (mocked HTTP via `responses`, in-memory
 SQLite) — no network access or live retailer availability required. Several
 of them replay **real HTML/JSON captured live from the target sites while
 building this** (see `tests/fixtures/`), not synthetic markup.

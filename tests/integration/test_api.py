@@ -119,6 +119,34 @@ def test_search_requires_model(client):
     assert "model" in response.get_json()["error"]
 
 
+def test_search_rejects_non_positive_emi_tenure(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": 0})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": -6})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+
+def test_search_rejects_non_numeric_emi_tenure(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": "twelve"})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+
+def test_search_rejects_negative_down_payment(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "down_payment": -100})
+    assert response.status_code == 400
+    assert "down_payment" in response.get_json()["error"]
+
+
+def test_search_rejects_negative_emi_rate(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_annual_rate_percent": -1})
+    assert response.status_code == 400
+    assert "emi_annual_rate_percent" in response.get_json()["error"]
+
+
 def test_model_suggestions_match_prefix(client):
     response = client.get("/api/models?q=iphone 17")
     assert response.status_code == 200

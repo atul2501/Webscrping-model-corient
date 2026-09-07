@@ -9,6 +9,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy.orm import contains_eager, joinedload
+
 from app.extensions import db
 from app.matching.matcher import get_or_create_variant
 from app.matching.normalizer import parse_product_name
@@ -195,10 +197,19 @@ def _display_source(source: str) -> str:
 
 
 def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config) -> dict:
+    # contains_eager/joinedload here (instead of leaving Listing.variant,
+    # Variant.product and Listing.offers to lazy-load) turns what used to be
+    # 1 + 2*N queries for N listings into a single query - each of those
+    # relationships is otherwise touched once per listing below and in
+    # _serialize_entry.
     listings = (
         Listing.query.filter_by(crawl_id=crawl_run.crawl_id)
         .join(Variant, Listing.variant_id == Variant.id)
         .join(Product, Variant.product_id == Product.id)
+        .options(
+            contains_eager(Listing.variant).contains_eager(Variant.product),
+            joinedload(Listing.offers),
+        )
         .all()
     )
     listings = [listing for listing in listings if _passes_filters(listing, query)]

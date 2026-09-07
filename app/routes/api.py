@@ -1,6 +1,7 @@
 from dataclasses import asdict
 
 from flask import Blueprint, current_app, jsonify, request
+from sqlalchemy.orm import joinedload
 
 from app.data.model_catalog import get_model_options, suggest_models
 from app.extensions import db
@@ -22,6 +23,39 @@ def _to_float(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _validate_emi_params(payload: dict) -> str | None:
+    """Returns an error message if any EMI-related field is present but
+    invalid, else None. Keeps `run_search` free to assume these are already
+    sane rather than silently ignoring or 500-ing on bad input.
+    """
+    tenure = payload.get("emi_tenure_months")
+    if tenure is not None:
+        try:
+            tenure_int = int(tenure)
+        except (TypeError, ValueError):
+            return "'emi_tenure_months' must be a whole number of months"
+        if tenure_int <= 0:
+            return "'emi_tenure_months' must be a positive number of months"
+
+    down_payment = payload.get("down_payment")
+    if down_payment is not None:
+        down_payment_float = _to_float(down_payment)
+        if down_payment_float is None:
+            return "'down_payment' must be a number"
+        if down_payment_float < 0:
+            return "'down_payment' cannot be negative"
+
+    annual_rate = payload.get("emi_annual_rate_percent")
+    if annual_rate is not None:
+        annual_rate_float = _to_float(annual_rate)
+        if annual_rate_float is None:
+            return "'emi_annual_rate_percent' must be a number"
+        if annual_rate_float < 0:
+            return "'emi_annual_rate_percent' cannot be negative"
+
+    return None
 
 
 def _serialize_offer(offer) -> dict:
@@ -100,6 +134,10 @@ def search():
     if not model:
         return jsonify({"error": "'model' is required"}), 400
 
+    emi_error = _validate_emi_params(payload)
+    if emi_error:
+        return jsonify({"error": emi_error}), 400
+
     params = {
         "model": model,
         "storage": payload.get("storage"),
@@ -124,7 +162,11 @@ def search():
 
 @api_bp.get("/product/<int:variant_id>")
 def product_detail(variant_id: int):
-    variant = db.session.get(Variant, variant_id)
+    variant = db.session.get(
+        Variant,
+        variant_id,
+        options=[joinedload(Variant.product), joinedload(Variant.listings).joinedload(Listing.offers)],
+    )
     if variant is None:
         return jsonify({"error": "not found"}), 404
     product = variant.product
