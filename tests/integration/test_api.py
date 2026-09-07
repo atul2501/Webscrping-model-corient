@@ -4,7 +4,7 @@ deterministically - no live network, no dependency on retailer sites being
 reachable or unchanged.
 """
 
-from app.scrapers.base import AdapterResult, BaseAdapter, RawListing, RawOffer, SearchQuery
+from app.scrapers.base import BaseAdapter, RawListing, RawOffer, SearchQuery
 
 
 class _FakeOkAdapter(BaseAdapter):
