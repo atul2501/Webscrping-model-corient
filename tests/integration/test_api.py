@@ -135,6 +135,22 @@ def test_search_rejects_non_numeric_emi_tenure(client):
     assert "emi_tenure_months" in response.get_json()["error"]
 
 
+def test_search_rejects_fractional_emi_tenure(client):
+    # Regression guard: emi_tenure_months=3.7 must be rejected, not silently
+    # truncated to 3 months via int().
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": 3.7})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+
+def test_search_rejects_boolean_emi_tenure(client):
+    # bool is a subclass of int in Python - int(True) == 1 would otherwise
+    # silently accept `emi_tenure_months: true` as a valid 1-month tenure.
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": True})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+
 def test_search_rejects_negative_down_payment(client):
     response = client.post("/api/search", json={"model": "iPhone 17 Pro", "down_payment": -100})
     assert response.status_code == 400

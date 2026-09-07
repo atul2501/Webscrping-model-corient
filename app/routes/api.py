@@ -32,11 +32,20 @@ def _validate_emi_params(payload: dict) -> str | None:
     """
     tenure = payload.get("emi_tenure_months")
     if tenure is not None:
+        # isinstance(tenure, bool) is checked separately because bool is a
+        # subclass of int in Python - int(True) would otherwise silently
+        # accept `emi_tenure_months: true` as a tenure of 1 month.
+        if isinstance(tenure, bool) or not isinstance(tenure, (int, float, str)):
+            return "'emi_tenure_months' must be a whole number of months"
         try:
-            tenure_int = int(tenure)
+            tenure_float = float(tenure)
         except (TypeError, ValueError):
             return "'emi_tenure_months' must be a whole number of months"
-        if tenure_int <= 0:
+        # A fractional value (e.g. 3.7) must be rejected, not silently
+        # truncated to 3 - int(3.7) would do exactly that with no error.
+        if tenure_float != int(tenure_float):
+            return "'emi_tenure_months' must be a whole number of months"
+        if int(tenure_float) <= 0:
             return "'emi_tenure_months' must be a positive number of months"
 
     down_payment = payload.get("down_payment")
