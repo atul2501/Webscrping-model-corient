@@ -163,6 +163,18 @@ def test_search_rejects_negative_emi_rate(client):
     assert "emi_annual_rate_percent" in response.get_json()["error"]
 
 
+def test_search_rejects_excessive_emi_tenure(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_tenure_months": 999999})
+    assert response.status_code == 400
+    assert "emi_tenure_months" in response.get_json()["error"]
+
+
+def test_search_rejects_excessive_emi_rate(client):
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "emi_annual_rate_percent": 10000})
+    assert response.status_code == 400
+    assert "emi_annual_rate_percent" in response.get_json()["error"]
+
+
 def test_model_suggestions_match_prefix(client):
     response = client.get("/api/models?q=iphone 17")
     assert response.status_code == 200
@@ -216,6 +228,82 @@ def test_search_returns_ranked_results_with_effective_price_and_emi(client, monk
     assert emi["monthly_emi"] > 0
 
     assert body["recommendation"]["best_effective_price"]["source"] == "fake_cheaper"
+
+
+def test_search_pagination_slices_results(client, app, monkeypatch):
+    monkeypatch.setitem(app.config, "RESULTS_PAGE_SIZE", 1)
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter, "fake_cheaper": _FakeCheaperAdapter})
+
+    first_page = client.post("/api/search", json={"model": "iPhone 17 Pro"})
+    assert first_page.status_code == 200
+    first_body = first_page.get_json()
+    assert len(first_body["results"]) == 1
+    assert first_body["results"][0]["source"] == "fake_cheaper"  # cheapest first
+    assert first_body["result_page"] == 1
+    assert first_body["result_page_size"] == 1
+    assert first_body["total_results"] == 2
+    assert first_body["total_pages"] == 2
+
+    second_page = client.post("/api/search", json={"model": "iPhone 17 Pro", "result_page": 2})
+    assert second_page.status_code == 200
+    second_body = second_page.get_json()
+    assert len(second_body["results"]) == 1
+    assert second_body["results"][0]["source"] == "fake_ok"
+    assert second_body["result_page"] == 2
+
+
+def test_search_recommendation_reflects_full_result_set_not_just_current_page(client, app, monkeypatch):
+    monkeypatch.setitem(app.config, "RESULTS_PAGE_SIZE", 1)
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter, "fake_cheaper": _FakeCheaperAdapter})
+
+    # Page 2 only contains fake_ok's listing, but the recommendation must
+    # still reflect the overall best deal across the full crawl.
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "result_page": 2})
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["results"][0]["source"] == "fake_ok"
+    assert body["recommendation"]["best_effective_price"]["source"] == "fake_cheaper"
+
+
+def test_search_result_page_beyond_last_page_returns_empty_results_not_error(client, monkeypatch):
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter, "fake_cheaper": _FakeCheaperAdapter})
+
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "result_page": 100})
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["results"] == []
+    assert body["total_results"] == 2
+
+
+def test_search_rejects_non_positive_result_page(client, monkeypatch):
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter})
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "result_page": 0})
+    assert response.status_code == 400
+    assert "result_page" in response.get_json()["error"]
+
+
+def test_search_rejects_non_integer_result_page(client, monkeypatch):
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter})
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "result_page": "two"})
+    assert response.status_code == 400
+    assert "result_page" in response.get_json()["error"]
+
+
+def test_search_rejects_result_page_size_over_max(client, app, monkeypatch):
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter})
+    response = client.post(
+        "/api/search",
+        json={"model": "iPhone 17 Pro", "result_page_size": app.config["RESULTS_MAX_PAGE_SIZE"] + 1},
+    )
+    assert response.status_code == 400
+    assert "result_page_size" in response.get_json()["error"]
+
+
+def test_search_rejects_non_positive_page(client, monkeypatch):
+    _patch_registry(monkeypatch, {"fake_ok": _FakeOkAdapter})
+    response = client.post("/api/search", json={"model": "iPhone 17 Pro", "page": 0})
+    assert response.status_code == 400
+    assert "'page'" in response.get_json()["error"]
 
 
 def test_one_source_failing_does_not_break_the_search(client, monkeypatch):

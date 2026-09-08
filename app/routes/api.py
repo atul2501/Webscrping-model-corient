@@ -47,6 +47,8 @@ def _validate_emi_params(payload: dict) -> str | None:
             return "'emi_tenure_months' must be a whole number of months"
         if int(tenure_float) <= 0:
             return "'emi_tenure_months' must be a positive number of months"
+        if int(tenure_float) > 60:
+            return "'emi_tenure_months' cannot exceed 60 months"
 
     down_payment = payload.get("down_payment")
     if down_payment is not None:
@@ -63,6 +65,8 @@ def _validate_emi_params(payload: dict) -> str | None:
             return "'emi_annual_rate_percent' must be a number"
         if annual_rate_float < 0:
             return "'emi_annual_rate_percent' cannot be negative"
+        if annual_rate_float > 50:
+            return "'emi_annual_rate_percent' cannot exceed 50"
 
     return None
 
@@ -87,6 +91,30 @@ def _validate_page_param(payload: dict) -> str | None:
         return "'page' must be a positive whole number"
     if int(page_float) <= 0:
         return "'page' must be a positive whole number"
+    return None
+
+
+def _validate_positive_int(payload: dict, field: str, max_value: int | None = None) -> str | None:
+    """Shared validation for `result_page`/`result_page_size`: a positive
+    whole number, distinct from `page` above - these slice the already-built
+    `results` array in build_response rather than affecting what gets
+    scraped, so they're validated separately and never touch the cache key.
+    """
+    value = payload.get(field)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return f"'{field}' must be a positive whole number"
+    try:
+        value_float = float(value)
+    except (TypeError, ValueError):
+        return f"'{field}' must be a positive whole number"
+    if value_float != int(value_float):
+        return f"'{field}' must be a positive whole number"
+    if int(value_float) <= 0:
+        return f"'{field}' must be a positive whole number"
+    if max_value is not None and int(value_float) > max_value:
+        return f"'{field}' cannot exceed {max_value}"
     return None
 
 
@@ -174,6 +202,16 @@ def search():
     if page_error:
         return jsonify({"error": page_error}), 400
 
+    result_page_error = _validate_positive_int(payload, "result_page")
+    if result_page_error:
+        return jsonify({"error": result_page_error}), 400
+
+    result_page_size_error = _validate_positive_int(
+        payload, "result_page_size", max_value=current_app.config["RESULTS_MAX_PAGE_SIZE"]
+    )
+    if result_page_size_error:
+        return jsonify({"error": result_page_size_error}), 400
+
     params = {
         "model": model,
         "storage": payload.get("storage"),
@@ -185,6 +223,8 @@ def search():
         "emi_annual_rate_percent": payload.get("emi_annual_rate_percent"),
         "sources": payload.get("sources"),
         "page": payload.get("page"),
+        "result_page": payload.get("result_page"),
+        "result_page_size": payload.get("result_page_size"),
     }
 
     try:

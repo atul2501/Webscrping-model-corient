@@ -31,6 +31,15 @@ class Config:
     SEARCH_CACHE_TTL_SECONDS = _int("SEARCH_CACHE_TTL_SECONDS", 900)
     SCRAPE_MAX_WORKERS = _int("SCRAPE_MAX_WORKERS", 3)
 
+    # Default size of one page of the *response* `results` array (distinct
+    # from `page`/SearchQuery.page, which asks upstream sources with real
+    # pagination - currently only Vijay Sales - for a deeper crawl). Set high
+    # enough that a normal single-model search is never silently truncated;
+    # a client can still request a smaller `result_page_size` explicitly to
+    # exercise real pagination, capped at RESULTS_MAX_PAGE_SIZE.
+    RESULTS_PAGE_SIZE = _int("RESULTS_PAGE_SIZE", 50)
+    RESULTS_MAX_PAGE_SIZE = _int("RESULTS_MAX_PAGE_SIZE", 100)
+
     EMI_DEFAULT_TENURE_MONTHS = _int("EMI_DEFAULT_TENURE_MONTHS", 12)
     EMI_DEFAULT_ANNUAL_RATE_PERCENT = _float("EMI_DEFAULT_ANNUAL_RATE_PERCENT", 14.0)
 

@@ -103,7 +103,7 @@ pip install -r requirements.txt
 pytest -v
 ```
 
-All 80 tests run fully offline (mocked HTTP via `responses`, in-memory
+All 104 tests run fully offline (mocked HTTP via `responses`, in-memory
 SQLite) — no network access or live retailer availability required. Several
 of them replay **real HTML/JSON captured live from the target sites while
 building this** (see `tests/fixtures/`), not synthetic markup.
@@ -111,17 +111,17 @@ building this** (see `tests/fixtures/`), not synthetic markup.
 ### Try a real search
 
 ```bash
-curl -X POST https://webscrping-model-corient-c1ww.onrender.com/api/search \
+curl -X POST http://<ec2-host>:5000/api/search \
   -H "Content-Type: application/json" \
-  -d '{"model": "Redmi Note 15 Pro", "emi_tenure_months": 12, "down_payment": 5000}'
+  -d '{"model": "iPhone 15", "storage": "128GB", "emi_tenure_months": 12, "down_payment": 5000}'
 ```
 
-This one's picked deliberately: on the live deploy, it reliably comes back
-with 15+ matched variants, a full price/EMI ranking, and a recommendation —
-a better first impression than a query that only clears one source. `iPhone
-17 Pro` works the same way locally, and still makes a fine example there —
-see [Deploying to Render](#deploying-to-render) further down for why
-Apple-model queries specifically are hit-or-miss from the live instance.
+Apple-model queries are a fine example on this deployment — see
+[Deploying to AWS EC2](#deploying-to-aws-ec2-recommended) below for why that's
+specifically called out: it wasn't always true. Vijay Sales previously
+returned zero results for every Apple/iPhone search, on every deployment;
+that's now fixed (it was a client-side category-matching bug, not an
+upstream block — see below).
 
 Response shape (real output, `results` trimmed from 17 down to one entry —
 `emi`, `offers` and `recommendation` are the fields worth looking at):
@@ -130,6 +130,7 @@ Response shape (real output, `results` trimmed from 17 down to one entry —
 {
   "crawl_id": "c006768c844e42d9af2833376ab36329",
   "page": 1,
+  "result_page": 1, "result_page_size": 50, "total_results": 17, "total_pages": 1,
   "query": { "model": "Redmi Note 15 Pro", "storage": null, "colour": null, "budget_min": null, "budget_max": null },
   "emi_assumptions": {
     "tenure_months": 12, "down_payment": 5000.0, "annual_rate_percent": 14.0,
@@ -164,6 +165,15 @@ Response shape (real output, `results` trimmed from 17 down to one entry —
 }
 ```
 
+`page` and `result_page` control two different things, deliberately kept
+separate: `page` asks upstream sources with real pagination (currently only
+Vijay Sales' GraphQL search) for a deeper crawl — the "Load more results"
+button in the UI uses it — while `result_page`/`result_page_size` slice the
+already-matched, ranked `results` array for this response (default page
+size 50, capped at `RESULTS_MAX_PAGE_SIZE`). The `recommendation` block is
+always computed from the full result set, never just the visible page, so
+the best-deal call-out is correct regardless of which page you're viewing.
+
 Or generate the committed sample output yourself:
 
 ```bash
@@ -177,6 +187,38 @@ once), captured from a real run against live sources:
 
 ![Search form](sample_output/screenshots/search_form.png)
 ![Ranked comparison table with EMI and deal score](sample_output/screenshots/comparison_results.png)
+
+## Deploying to AWS EC2 (recommended)
+
+Croma and Reliance Digital are both scraped with a plain `requests` session —
+no proxy, no stealth headers, no fingerprint evasion, by design (see
+[Source adapters](#source-adapters--whats-real-whats-not-and-why)) — so which
+network the app runs from genuinely affects whether their bot-management lets
+the request through. Confirmed directly, side by side, against the same
+queries:
+
+| Source | Render free tier (Singapore) | EC2, `ap-south-1` (Mumbai) |
+|---|---|---|
+| Croma | Blocked by Akamai's WAF intermittently to consistently, depending on the request | Succeeds — real listings returned |
+| Reliance Digital | Fails: even `robots.txt` itself can't be fetched from this IP range, and the adapter's fail-closed design (never bypass an unreadable robots.txt) then treats the whole domain as disallowed | Succeeds — real listings returned |
+| Vijay Sales | Works for every brand (was previously broken for Apple/iPhone everywhere — see below, now fixed) | Works for every brand |
+
+None of this is IP allow-listing or evasion — it's simply that an Indian
+hosting region reaches Indian retail sites the way a real customer would,
+the same as running the app from a laptop on an Indian ISP. Deploy it the
+same way as Render (below), just on an EC2 instance in `ap-south-1` instead:
+
+```bash
+# on the EC2 instance
+git clone https://github.com/atul2501/Webscrping-model-corient
+cd Webscrping-model-corient
+cp .env.example .env   # set SECRET_KEY, DATABASE_URL, etc.
+docker compose up -d --build
+```
+
+`docker-compose.yml` runs the same `Dockerfile`-based image behind `gunicorn`
+as Render does — see "What makes this work, specifically" just below, in the
+Render section, for the mechanics common to both.
 
 ## Deploying to Render
 
@@ -200,20 +242,24 @@ This repo's own deploy is live at
 Free tier - the first request after a period of inactivity can take 30-50s
 while the instance spins back up.
 
-Everything else about the deployed instance behaves normally. One thing to
-note: Reliance Digital may not return results there, because the free
-tier's hosting region is Singapore and Reliance Digital's bot-protection
-appears to treat that IP range more strictly than an Indian residential
-one. Running the app locally does not hit this - Reliance Digital works
-normally there.
+Everything else about the deployed instance behaves normally, but see the
+[Deploying to AWS EC2](#deploying-to-aws-ec2-recommended) table above:
+Render's free-tier region (Singapore) makes both Croma and Reliance Digital
+unreliable here, for reasons that are about network path, not this app's
+code — running locally, or from an Indian region, doesn't hit this.
 
-A second, narrower one: on the deployed instance, Vijay Sales returns
-results normally for every brand except Apple/iPhone. Vijay Sales' own
-catalogue clearly has iPhone stock (confirmed directly against their API),
-so this isn't missing inventory - it looks like Apple-specific
-anti-scraping protection (common industry-wide, tied to MAP-style reseller
-agreements) that other brands aren't subject to. Locally, iPhone searches
-on Vijay Sales work fine.
+**Correction from an earlier version of this README**: that same section
+used to also blame Vijay Sales returning zero Apple/iPhone results on
+"Apple-specific anti-scraping protection." That theory was wrong. The actual
+cause: Vijay Sales tags real iPhones with an `"iphones"` category (not
+`"smartphones"`), and this adapter's category filter only ever matched the
+literal string `"smartphones"` — so every genuine iPhone result was being
+silently discarded by our own filter, on every deployment, regardless of
+region. Confirmed directly against the live GraphQL endpoint and fixed in
+`app/scrapers/vijay_sales.py` (`_is_in_mobiles_category`, keyed on the
+`"mobiles"` category that's present on every real phone regardless of
+brand); see the regression tests added alongside it in
+`tests/adapters/test_vijay_sales_adapter.py`.
 
 What makes this work, specifically:
 - `docker-entrypoint.sh` runs `flask db upgrade` before starting `gunicorn`,
@@ -310,8 +356,13 @@ infrastructure, not a `robots.txt` rule. The spec is explicit: *"Respect
 robots.txt, site terms, rate limits, and access controls. Do not bypass
 CAPTCHA or authentication barriers."* — so `app/scrapers/croma.py` does not
 attempt stealth headers, proxy rotation, or any other evasion to get around
-it. It's fully implemented with real request flow and defensively-written
-(best-effort, unverified) selectors, and it fails the way this whole system
+it. Whether a given request clears the WAF turns out to depend heavily on
+network origin, not on anything this adapter does or doesn't send: it's been
+observed to consistently succeed from an AWS `ap-south-1` (Mumbai) host and
+to consistently fail from Render's Singapore region and from generic
+cloud/CI datacenter IPs — see
+[Deploying to AWS EC2](#deploying-to-aws-ec2-recommended). It's fully
+implemented with a real request flow, and it fails the way this whole system
 is designed to handle a source failing: cleanly, via `SourceBlockedError`,
 leaving the other two adapters' results intact. This is exercised directly in
 `tests/adapters/test_croma_adapter.py` by replaying the real 403 response.
@@ -337,8 +388,13 @@ phones at all — a smartwatch, earbuds, a "Smartphone Printer" — that a
 name-keyword blocklist alone can't fully anticipate; this was caught during
 live testing with a brand-only query. The GraphQL query also asks for each
 item's own site category (`categories { url_key }`), and `search()` keeps
-only items tagged `"smartphones"` there — an authoritative signal from the
-site itself, not a name guess.
+only items tagged `"mobiles"` there — an authoritative signal from the site
+itself, not a name guess. This was originally keyed on `"smartphones"`
+instead, which silently discarded every genuine iPhone result: Vijay Sales
+tags real iPhones under `"iphones"`, not `"smartphones"`, while both brands
+share the parent `"mobiles"` category (confirmed directly against the live
+API — see `tests/adapters/test_vijay_sales_adapter.py` for the regression
+tests that lock this in).
 Bank-offer text isn't in that API's schema, and the spec's given bank-offers
 URL 404s today (the site moved that content into an on-page popup component
 since the spec was written) — so as a bounded, best-effort enrichment, the
@@ -483,7 +539,7 @@ Matches the spec's endpoint table exactly:
 |---|---|
 | `GET /` | Search UI |
 | `GET /health` | `{"status": "ok", "db": "ok"}` |
-| `POST /api/search` | `{model, storage?, colour?, budget_min?, budget_max?, emi_tenure_months?, down_payment?, emi_annual_rate_percent?, sources?}` → ranked comparison |
+| `POST /api/search` | `{model, storage?, colour?, budget_min?, budget_max?, emi_tenure_months?, down_payment?, emi_annual_rate_percent?, sources?, page?, result_page?, result_page_size?}` → ranked comparison |
 | `GET /api/product/<variant_id>` | Normalized product/variant + latest listing per source |
 | `GET /api/offers/<listing_id>` | Offers/EMI-relevant facts for one listing |
 | `GET /api/price-history/<variant_id>` | All scraped price points for a variant, oldest to newest, plus detected price drops |
@@ -494,7 +550,7 @@ Matches the spec's endpoint table exactly:
 fixed to hardcode here - run a search, then pull them out of that response:
 
 ```bash
-BASE_URL=https://webscrping-model-corient-c1ww.onrender.com
+BASE_URL=http://<ec2-host>:5000
 
 curl -s -X POST $BASE_URL/api/search \
   -H "Content-Type: application/json" \
@@ -633,9 +689,29 @@ arbitrary bigger number.
 
 - **Croma** will most likely fail with a 403 from a typical cloud/CI/
   datacenter IP (see above) — this is expected, observed, and handled, not a
-  bug. It may well succeed from a residential IP; the selectors are
-  best-effort since no successful fetch was obtainable to verify them while
-  building this.
+  bug. Confirmed to succeed reliably from an AWS `ap-south-1` (Mumbai) host,
+  returning real listings end to end — see
+  [Deploying to AWS EC2](#deploying-to-aws-ec2-recommended). The parsing
+  selectors are exercised in production from that host but still lack a
+  dedicated unit test against a captured *successful* response (only the
+  403-blocked path is covered by `tests/adapters/test_croma_adapter.py`
+  today) — capturing that fixture requires a request from a non-blocked IP,
+  which wasn't available while adding this note; adding it is the last
+  concrete item needed to close out Croma's test coverage.
+- **Vijay Sales** previously returned zero results for every Apple/iPhone
+  query, on every deployment (local and hosted alike) — this was a
+  client-side category-filter bug (matching only `"smartphones"`, while
+  Vijay Sales tags real iPhones `"iphones"`), not upstream blocking. Fixed
+  in `app/scrapers/vijay_sales.py`; see
+  [Source adapters](#source-adapters--whats-real-whats-not-and-why) above
+  for the root-cause detail and `tests/adapters/test_vijay_sales_adapter.py`
+  for the regression tests.
+- **Pagination**: `page` (drives a deeper upstream crawl for sources with
+  real pagination — currently only Vijay Sales) and `result_page`/
+  `result_page_size` (slice the response's `results` array) are separate,
+  deliberately: the former changes what gets scraped, the latter only
+  changes what's shown from what's already been scraped. See the API
+  section above for the exact contract and `total_results`/`total_pages`.
 - **Reliance Digital** has a curated cascade of per-model collection pages
   for common iPhones (see the adapters section above), but that list isn't
   exhaustive and those slugs can go stale over time; a query outside it

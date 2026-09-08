@@ -274,6 +274,22 @@ def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config
 
     entries.sort(key=lambda e: (e["effective_price"] is None, e["effective_price"] or 0.0))
 
+    # `result_page`/`result_page_size` slice the response's `results` array
+    # and are unrelated to `page` above (which asks Vijay Sales' upstream
+    # GraphQL search for a deeper crawl, not which slice of this already-
+    # matched list to show) - see _validate_page_param vs
+    # _validate_positive_int in app/routes/api.py. The recommendation is
+    # deliberately built from the full `entries` list before slicing, so the
+    # best deal shown is always correct regardless of which page is visible.
+    recommendation = _build_recommendation(entries)
+
+    result_page_size = int(params.get("result_page_size") or config["RESULTS_PAGE_SIZE"])
+    result_page = int(params.get("result_page") or 1)
+    total_results = len(entries)
+    total_pages = max(1, -(-total_results // result_page_size))
+    start = (result_page - 1) * result_page_size
+    page_entries = entries[start : start + result_page_size]
+
     return {
         "crawl_id": crawl_run.crawl_id,
         "query": {
@@ -284,6 +300,10 @@ def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config
             "budget_max": query.budget_max,
         },
         "page": query.page,
+        "result_page": result_page,
+        "result_page_size": result_page_size,
+        "total_results": total_results,
+        "total_pages": total_pages,
         "emi_assumptions": {
             "tenure_months": tenure_months,
             "down_payment": down_payment,
@@ -295,8 +315,8 @@ def build_response(crawl_run: CrawlRun, query: SearchQuery, params: dict, config
         "sources_failed": crawl_run.sources_failed,
         "source_notes": crawl_run.notes,
         "scraped_at": crawl_run.finished_at.isoformat() if crawl_run.finished_at else None,
-        "results": [_serialize_entry(e) for e in entries],
-        "recommendation": _build_recommendation(entries),
+        "results": [_serialize_entry(e) for e in page_entries],
+        "recommendation": recommendation,
     }
 
 
