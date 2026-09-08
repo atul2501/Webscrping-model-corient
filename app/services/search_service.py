@@ -333,6 +333,7 @@ def _serialize_entry(entry: dict) -> dict:
         "variant": {"storage": variant.storage, "colour": variant.colour},
         "source": listing.source,
         "product_name": listing.product_name_raw,
+        "sku": listing.sku,
         "product_url": listing.product_url,
         "image_url": listing.image_url,
         "currency": listing.currency,
@@ -351,6 +352,8 @@ def _serialize_entry(entry: dict) -> dict:
                 "bank": o.bank,
                 "offer_discount": _num(o.offer_discount),
                 "emi_available": o.emi_available,
+                "emi_tenure": o.emi_tenure,
+                "emi_rate": o.emi_rate,
                 "valid_till_text": o.valid_till_text,
             }
             for o in listing.offers

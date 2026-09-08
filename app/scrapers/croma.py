@@ -32,7 +32,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from app.scrapers.base import BaseAdapter, RawListing, RawOffer, SearchQuery
-from app.scrapers.parsing import extract_bank, guess_offer_type, parse_price, text_matches_query
+from app.scrapers.parsing import extract_bank, fix_mangled_rupee_symbol, guess_offer_type, parse_price, text_matches_query
 
 BASE_URL = "https://www.croma.com"
 LISTING_URL = f"{BASE_URL}/phoneswearables/mobile-phones/apple-iphones/c/97"
@@ -111,7 +111,7 @@ class CromaAdapter(BaseAdapter):
         offers: list[RawOffer] = []
         offer_el = _first_match(card, OFFER_SELECTORS)
         if offer_el is not None:
-            text = offer_el.get_text(strip=True)
+            text = fix_mangled_rupee_symbol(offer_el.get_text(strip=True))
             if text:
                 offers.append(
                     RawOffer(
@@ -131,6 +131,15 @@ class CromaAdapter(BaseAdapter):
             mrp=mrp,
             selling_price=selling_price,
             discount=discount,
+            # Unlike Vijay Sales/Reliance Digital, this listing page has no
+            # per-card stock badge in any of the 21 real cards captured (see
+            # tests/fixtures/croma_listing.html) - the only "out of stock"
+            # text on the whole page is an unrelated page-level filter
+            # toggle ("Exclude out of stock items"), not a per-product
+            # signal. Defaults to "available" since nothing in the observed
+            # markup indicates otherwise, but this is unverified against a
+            # genuinely out-of-stock Croma listing - see the README's
+            # "Assumptions and known limitations".
             availability="available",
             seller="Croma",
             offers=offers,

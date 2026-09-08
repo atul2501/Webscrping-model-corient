@@ -41,7 +41,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from app.scrapers.base import BaseAdapter, RawListing, RawOffer, SearchQuery, SourceBlockedError, SourceFetchError
-from app.scrapers.parsing import extract_bank, guess_offer_type, parse_price, text_matches_query
+from app.scrapers.parsing import extract_bank, fix_mangled_rupee_symbol, guess_offer_type, parse_price, text_matches_query
 
 BASE_URL = "https://www.reliancedigital.in"
 GENERIC_LISTING_URL = f"{BASE_URL}/collection/smartphones"
@@ -196,7 +196,7 @@ class RelianceDigitalAdapter(BaseAdapter):
 
         teaser_el = card.select_one(".teaser-tag")
         if teaser_el is not None:
-            text = teaser_el.get_text(strip=True)
+            text = fix_mangled_rupee_symbol(teaser_el.get_text(strip=True))
             if text:
                 offers.append(
                     RawOffer(

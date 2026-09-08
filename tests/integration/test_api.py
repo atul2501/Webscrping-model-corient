@@ -32,6 +32,8 @@ class _FakeOkAdapter(BaseAdapter):
                         bank="HDFC",
                         offer_discount=4000,
                         emi_available=True,
+                        emi_tenure=12,
+                        emi_rate=13.5,
                     )
                 ],
             )
@@ -228,6 +230,17 @@ def test_search_returns_ranked_results_with_effective_price_and_emi(client, monk
     assert emi["monthly_emi"] > 0
 
     assert body["recommendation"]["best_effective_price"]["source"] == "fake_cheaper"
+
+    # Regression: sku (captured but never serialized anywhere) and
+    # emi_tenure/emi_rate (present on /api/product and /api/offers but
+    # missing here specifically) were both silent gaps against the spec's
+    # "Data to Capture" list, found in a full audit pass.
+    fake_ok_result = body["results"][1]
+    assert fake_ok_result["source"] == "fake_ok"
+    assert fake_ok_result["sku"] == "SKU1"
+    fake_ok_offer = fake_ok_result["offers"][0]
+    assert fake_ok_offer["emi_tenure"] == 12
+    assert fake_ok_offer["emi_rate"] == 13.5
 
 
 def test_search_pagination_slices_results(client, app, monkeypatch):

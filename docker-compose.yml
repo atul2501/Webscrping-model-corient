@@ -1,9 +1,17 @@
+# SECRET_KEY/POSTGRES_PASSWORD below use ${VAR:-default} substitution -
+# docker compose reads a `.env` file in this same directory automatically
+# (the same gitignored file python-dotenv loads for `python run.py`), so
+# setting SECRET_KEY=... / POSTGRES_PASSWORD=... there overrides these
+# defaults without editing this tracked file. The `dev-secret-key`/
+# `price_intel` fallbacks are for a zero-config local demo only - the spec's
+# "keep secrets outside source code" is about not requiring a *real* secret
+# to be hardcoded here, not about these throwaway local-dev defaults.
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: price_intel
-      POSTGRES_PASSWORD: price_intel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-price_intel}
       POSTGRES_DB: price_intel
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -24,11 +32,11 @@ services:
       - "8000:8000"
     environment:
       FLASK_APP: run.py
-      SECRET_KEY: dev-secret-key
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
       # Points at the `db` service above, not localhost - this is what makes
       # docker-compose "the Postgres path" vs. `python run.py`'s SQLite
       # default (see .env.example).
-      DATABASE_URL: postgresql://price_intel:price_intel@db:5432/price_intel
+      DATABASE_URL: postgresql://price_intel:${POSTGRES_PASSWORD:-price_intel}@db:5432/price_intel
       HTTP_TIMEOUT_SECONDS: 12
       HTTP_MAX_RETRIES: 3
       RATE_LIMIT_SECONDS_PER_DOMAIN: 1.5
@@ -40,6 +48,17 @@ services:
       # LOG_FILE deliberately unset, same reasoning as render.yaml: logs go
       # to stdout, which `docker compose logs` already captures - a file
       # written inside this container would vanish when it's recreated.
+    healthcheck:
+      # No curl in this image (python:3.12-slim, kept lean on purpose) - a
+      # stdlib urllib call needs no extra OS package. This is also what lets
+      # `scheduler` below wait on `web` being healthy, not just started -
+      # "started" would mean "flask db upgrade may still be mid-migration",
+      # a real race scheduler previously hit against the same fresh database.
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   # Runs scripts/scheduled_refresh.py forever, on its own - the spec's
   # "Scheduled refresh / background jobs" feature. A separate service/process
@@ -49,12 +68,21 @@ services:
   # only want on-demand search, not a standing background crawl.
   scheduler:
     build: .
-    command: python scripts/scheduled_refresh.py
+    # The image's ENTRYPOINT (docker-entrypoint.sh) always runs `flask db
+    # upgrade` before its command, unconditionally - it doesn't forward `$@`,
+    # so simply setting `command:` here does NOT override it; this service
+    # would silently run a second, redundant gunicorn instead of the
+    # scheduler script, and race `web` on the same fresh-database migration
+    # (this really happened - see the git history for the fix). Clearing
+    # `entrypoint:` bypasses docker-entrypoint.sh entirely for this one
+    # service, since migrations are `web`'s job alone.
+    entrypoint: []
+    command: ["python", "scripts/scheduled_refresh.py"]
     depends_on:
-      db:
+      web:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://price_intel:price_intel@db:5432/price_intel
+      DATABASE_URL: postgresql://price_intel:${POSTGRES_PASSWORD:-price_intel}@db:5432/price_intel
       HTTP_TIMEOUT_SECONDS: 12
       HTTP_MAX_RETRIES: 3
       RATE_LIMIT_SECONDS_PER_DOMAIN: 1.5

@@ -136,6 +136,7 @@ def _serialize_listing_brief(listing) -> dict:
         "listing_id": listing.id,
         "source": listing.source,
         "product_name": listing.product_name_raw,
+        "sku": listing.sku,
         "product_url": listing.product_url,
         "image_url": listing.image_url,
         "mrp": _num(listing.mrp),

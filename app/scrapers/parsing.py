@@ -6,6 +6,20 @@ import re
 
 _PRICE_RE = re.compile(r"[\d,]+(?:\.\d+)?")
 
+# Reliance Digital's own promotional offer copy (confirmed by inspecting the
+# raw HTTP response bytes directly, not guessed) has a literal "?" where a
+# Rupee sign was clearly intended - e.g. "?4K EMI Off or ?3K Full Swipe CC*"
+# - present verbatim even in an embedded CMS JSON config on the same page, so
+# this is an encoding mistake in their own authored content, not a decoding
+# bug in our fetch pipeline (response.encoding/content were checked). Only
+# "?" immediately before a digit is rewritten - a real question mark
+# elsewhere in offer text is left untouched.
+_MANGLED_RUPEE_RE = re.compile(r"\?(?=\d)")
+
+
+def fix_mangled_rupee_symbol(text: str) -> str:
+    return _MANGLED_RUPEE_RE.sub("₹", text)
+
 KNOWN_BANKS = [
     "HDFC", "ICICI", "SBI", "Axis", "Kotak", "IDFC", "Yes Bank", "RBL",
     "PNB", "IndusInd", "HSBC", "Federal Bank", "AU Small Finance",

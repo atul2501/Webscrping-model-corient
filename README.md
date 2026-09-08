@@ -738,8 +738,14 @@ principle every adapter follows. Covered by
   injected client-side (no `<img>` tag exists in the static HTML at all),
   and this listing page doesn't expose bank/offer text at the card level —
   only price. `tests/adapters/test_croma_adapter.py` now covers both the
-  403-blocked path and this successful-parse path (90% coverage, up from
-  33%).
+  403-blocked path and this successful-parse path (97% coverage, up from
+  33%). A third gap, also confirmed against that same real capture: no
+  per-card stock badge exists anywhere in the 21 real cards (the only
+  "out of stock" text on the whole page is an unrelated page-level filter
+  toggle) — `availability` defaults to `"available"` since nothing in the
+  observed markup says otherwise, but this is unverified against a
+  genuinely out-of-stock Croma listing (unlike Vijay Sales/Reliance Digital,
+  which both do reflect real stock status).
 - **Vijay Sales** previously returned zero results for every Apple/iPhone
   query, on every deployment (local and hosted alike) — this was a
   client-side category-filter bug (matching only `"smartphones"`, while
@@ -764,6 +770,17 @@ principle every adapter follows. Covered by
   this source alone — Vijay Sales' full-text API doesn't have this
   limitation, and one source having a gap for a given model never blocks
   the other two from still returning their results.
+- **Reliance Digital's own promotional offer text has a literal "?" where a
+  Rupee sign was clearly intended** (e.g. "?4K EMI Off or ?3K Full Swipe
+  CC*") — confirmed by inspecting the raw HTTP response bytes directly
+  (`response.encoding`/content checked, not guessed): the same "?" appears
+  verbatim even inside an embedded CMS JSON config block on the same page,
+  so this is a mistake in their own authored content, not a decoding bug in
+  this app's fetch pipeline. Since the pattern (a "?" immediately before a
+  digit, in Indian-retail promo copy) is unambiguous, it's normalized to
+  "₹" for every adapter (`app/scrapers/parsing.py`'s
+  `fix_mangled_rupee_symbol`) — a real question mark elsewhere in offer text
+  is left untouched. Covered by `tests/unit/test_parsing.py`.
 - The **colour** field is only extracted when a title follows the
   comma/paren spec-list shape real adapter output uses; a single unbroken
   string with no separators (e.g. a hypothetical `"iPhone17Pro256GBTitanium"`)
