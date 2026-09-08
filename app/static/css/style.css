@@ -590,7 +590,6 @@ body {
 .history-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12.5px; }
 .history-table th, .history-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 .history-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
-.history-table td.history-drop { color: var(--good); font-weight: 700; }
 
 .history-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
