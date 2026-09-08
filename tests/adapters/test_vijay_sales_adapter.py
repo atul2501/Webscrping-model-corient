@@ -95,6 +95,60 @@ def test_bank_offer_enrichment_is_best_effort_and_never_fatal():
 
 
 @responses.activate
+def test_iphone_result_survives_the_category_filter():
+    # Regression for the bug that silently dropped every iPhone result on
+    # Vijay Sales in production: real GraphQL responses for iPhones carry a
+    # categories list (unlike GRAPHQL_RESPONSE above, which omits it
+    # entirely and therefore never exercised this filter at all) tagged
+    # "iphones", not "smartphones".
+    response = {
+        "data": {
+            "products": {
+                "total_count": 1,
+                "items": [
+                    {
+                        "name": "Apple iPhone 15 (256GB Storage, Blue)",
+                        "sku": "245001",
+                        "url_key": "apple-iphone-15-256gb-storage-blue",
+                        "stock_status": "IN_STOCK",
+                        "rating_summary": 90,
+                        "review_count": 5,
+                        "categories": [
+                            {"url_key": "products"},
+                            {"url_key": "electronics"},
+                            {"url_key": "mobiles-and-accessories"},
+                            {"url_key": "mobiles"},
+                            {"url_key": "iphones"},
+                        ],
+                        "small_image": {"url": "https://vsprod.vijaysales.com/media/iphone15blue.jpg"},
+                        "price_range": {
+                            "minimum_price": {
+                                "regular_price": {"value": 69900},
+                                "final_price": {"value": 65900},
+                                "discount": {"amount_off": 4000, "percent_off": 5.7},
+                            }
+                        },
+                    }
+                ],
+            }
+        }
+    }
+    responses.add(responses.GET, GRAPHQL_URL, body=json.dumps(response), status=200)
+    responses.add(
+        responses.GET,
+        f"{BASE_URL}/p/245001/apple-iphone-15-256gb-storage-blue",
+        status=500,
+    )
+
+    adapter = VijaySalesAdapter(ADAPTER_TEST_CONFIG)
+    result = adapter.run(SearchQuery(model="iPhone 15"), crawl_id="test-crawl")
+
+    assert result.ok is True
+    assert len(result.listings) == 1
+    assert result.listings[0].sku == "245001"
+
+
+@responses.activate
 def test_malformed_graphql_response_is_handled_gracefully():
     responses.add(responses.GET, GRAPHQL_URL, body="not json", status=200)
 
@@ -105,7 +159,7 @@ def test_malformed_graphql_response_is_handled_gracefully():
     assert result.listings == []
 
 
-def test_is_in_smartphones_category_true_for_real_phone():
+def test_is_in_mobiles_category_true_for_real_phone():
     item = {
         "name": "Samsung Galaxy Z Flip7 (12GB RAM, 256GB Storage)",
         "categories": [
@@ -114,10 +168,28 @@ def test_is_in_smartphones_category_true_for_real_phone():
             {"url_key": "smartphones"},
         ],
     }
-    assert VijaySalesAdapter._is_in_smartphones_category(item) is True
+    assert VijaySalesAdapter._is_in_mobiles_category(item) is True
 
 
-def test_is_in_smartphones_category_false_for_text_search_false_positive():
+def test_is_in_mobiles_category_true_for_iphone_tagged_iphones_not_smartphones():
+    # Regression: Vijay Sales tags real iPhones with "iphones", not
+    # "smartphones" (confirmed against the live GraphQL endpoint) - a filter
+    # keyed on "smartphones" alone silently dropped every Apple result while
+    # Android phones (tagged "smartphones") passed through fine.
+    item = {
+        "name": "Apple iPhone 15 (256 GB Storage, Blue)",
+        "categories": [
+            {"url_key": "products"},
+            {"url_key": "electronics"},
+            {"url_key": "mobiles-and-accessories"},
+            {"url_key": "mobiles"},
+            {"url_key": "iphones"},
+        ],
+    }
+    assert VijaySalesAdapter._is_in_mobiles_category(item) is True
+
+
+def test_is_in_mobiles_category_false_for_text_search_false_positive():
     # Regression: a broad catalog-crawl search for "smartphone" also matches
     # products whose *name* contains the word but aren't phones - the site's
     # own category breadcrumb is what actually distinguishes them, not the
@@ -130,8 +202,25 @@ def test_is_in_smartphones_category_false_for_text_search_false_positive():
             {"url_key": "instant-camera"},
         ],
     }
-    assert VijaySalesAdapter._is_in_smartphones_category(item) is False
+    assert VijaySalesAdapter._is_in_mobiles_category(item) is False
 
 
-def test_is_in_smartphones_category_false_when_categories_missing():
-    assert VijaySalesAdapter._is_in_smartphones_category({"name": "Something"}) is False
+def test_is_in_mobiles_category_false_for_accessory_under_mobiles_and_accessories():
+    # Regression: the parent "mobiles-and-accessories" category is present on
+    # both real phones and phone accessories - only the more specific
+    # "mobiles" (vs. "mobile-accessories") child category actually
+    # distinguishes them.
+    item = {
+        "name": "Apple iPhone 15 Silicone Case with MagSafe - Black",
+        "categories": [
+            {"url_key": "electronics"},
+            {"url_key": "mobiles-and-accessories"},
+            {"url_key": "mobile-accessories"},
+            {"url_key": "cases-and-covers"},
+        ],
+    }
+    assert VijaySalesAdapter._is_in_mobiles_category(item) is False
+
+
+def test_is_in_mobiles_category_false_when_categories_missing():
+    assert VijaySalesAdapter._is_in_mobiles_category({"name": "Something"}) is False

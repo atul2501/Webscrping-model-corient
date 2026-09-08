@@ -13,6 +13,7 @@ two rows.
 import logging
 
 from rapidfuzz import fuzz
+from sqlalchemy.orm import contains_eager
 
 from app.extensions import db
 from app.matching.normalizer import ParsedProduct
@@ -31,6 +32,7 @@ def _find_fuzzy_variant(parsed: ParsedProduct) -> Variant | None:
     # like "17 Pro" vs "17Pro" without also merging different colours.
     candidates = (
         Variant.query.join(Product)
+        .options(contains_eager(Variant.product))
         .filter(
             Product.brand == parsed.brand,
             Variant.storage == parsed.storage,

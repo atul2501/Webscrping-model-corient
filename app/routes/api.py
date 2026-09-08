@@ -67,6 +67,29 @@ def _validate_emi_params(payload: dict) -> str | None:
     return None
 
 
+def _validate_page_param(payload: dict) -> str | None:
+    """`page` is used to request a deeper crawl of sources whose upstream
+    API supports real pagination (currently only Vijay Sales' GraphQL search -
+    see SearchQuery.page) - it isn't a slice offset into the response, but it
+    still has to be a sane positive integer or `run_search`'s bare `int()`
+    cast on it would 500 instead of returning a clean 400.
+    """
+    page = payload.get("page")
+    if page is None:
+        return None
+    if isinstance(page, bool) or not isinstance(page, (int, float, str)):
+        return "'page' must be a positive whole number"
+    try:
+        page_float = float(page)
+    except (TypeError, ValueError):
+        return "'page' must be a positive whole number"
+    if page_float != int(page_float):
+        return "'page' must be a positive whole number"
+    if int(page_float) <= 0:
+        return "'page' must be a positive whole number"
+    return None
+
+
 def _serialize_offer(offer) -> dict:
     return {
         "offer_text": offer.offer_text,
@@ -147,6 +170,10 @@ def search():
     if emi_error:
         return jsonify({"error": emi_error}), 400
 
+    page_error = _validate_page_param(payload)
+    if page_error:
+        return jsonify({"error": page_error}), 400
+
     params = {
         "model": model,
         "storage": payload.get("storage"),
@@ -196,7 +223,7 @@ def product_detail(variant_id: int):
 
 @api_bp.get("/offers/<int:listing_id>")
 def offers_for_listing(listing_id: int):
-    listing = db.session.get(Listing, listing_id)
+    listing = db.session.get(Listing, listing_id, options=[joinedload(Listing.offers)])
     if listing is None:
         return jsonify({"error": "not found"}), 404
 
@@ -212,7 +239,7 @@ def offers_for_listing(listing_id: int):
 
 @api_bp.get("/price-history/<int:variant_id>")
 def price_history(variant_id: int):
-    variant = db.session.get(Variant, variant_id)
+    variant = db.session.get(Variant, variant_id, options=[joinedload(Variant.product)])
     if variant is None:
         return jsonify({"error": "not found"}), 404
 

@@ -89,7 +89,7 @@ class VijaySalesAdapter(BaseAdapter):
             # name/description happens to mention "phone" (Nothing Ear buds,
             # watches, etc.) that the keyword blocklist can't anticipate -
             # the category breadcrumb from the site itself is authoritative.
-            if item.get("categories") and not self._is_in_smartphones_category(item):
+            if item.get("categories") and not self._is_in_mobiles_category(item):
                 continue
             listings.append(self._to_listing(item))
 
@@ -123,18 +123,26 @@ class VijaySalesAdapter(BaseAdapter):
         return any(keyword in lowered for keyword in ACCESSORY_KEYWORDS)
 
     @staticmethod
-    def _is_in_smartphones_category(item: dict) -> bool:
+    def _is_in_mobiles_category(item: dict) -> bool:
         """True only if the site's own category breadcrumb (not a name
-        keyword guess) puts this item under Smartphones. Needed for the
+        keyword guess) puts this item under Mobiles. Needed for the
         full-catalog crawl: a broad text search for "smartphone" also
         matches things like a "Smartphone Printer" or a smartwatch whose
         description happens to mention phones - `_looks_like_accessory`'s
         keyword list can't anticipate every such false positive, but every
-        real phone on this site is tagged with this category regardless of
-        what words are in its name.
+        real phone on this site carries this category regardless of what
+        words are in its name.
+
+        Deliberately keyed on "mobiles" rather than "smartphones": Vijay
+        Sales tags iPhones with "iphones" (not "smartphones"), so matching
+        only "smartphones" silently dropped every Apple result while Android
+        phones (tagged "smartphones") passed through fine - confirmed live
+        against the real GraphQL endpoint. "mobiles" is the parent category
+        present on every real phone regardless of brand, and is absent from
+        accessory listings (which sit under "mobile-accessories" instead).
         """
 
-        return any((cat.get("url_key") or "") == "smartphones" for cat in item.get("categories") or [])
+        return any((cat.get("url_key") or "") == "mobiles" for cat in item.get("categories") or [])
 
     def _to_listing(self, item: dict) -> RawListing:
         sku = item.get("sku")
