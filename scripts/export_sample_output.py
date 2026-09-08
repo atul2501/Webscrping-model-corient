@@ -46,7 +46,7 @@ def main() -> None:
         writer = csv.writer(f)
         writer.writerow(
             [
-                "source", "product_name", "storage", "colour", "mrp", "selling_price",
+                "source", "product_name", "sku", "storage", "colour", "mrp", "selling_price",
                 "discount", "effective_price", "availability", "rating", "deal_score",
                 "emi_monthly", "emi_tenure_months", "product_url", "scraped_at",
             ]
@@ -55,7 +55,7 @@ def main() -> None:
             emi = row.get("emi") or {}
             writer.writerow(
                 [
-                    row["source"], row["product_name"], row["variant"]["storage"], row["variant"]["colour"],
+                    row["source"], row["product_name"], row["sku"], row["variant"]["storage"], row["variant"]["colour"],
                     row["mrp"], row["selling_price"], row["discount"], row["effective_price"],
                     row["availability"], row["rating"], row["deal_score"],
                     emi.get("monthly_emi"), emi.get("tenure_months"), row["product_url"], row["scraped_at"],
