@@ -43,6 +43,12 @@ class Config:
     EMI_DEFAULT_TENURE_MONTHS = _int("EMI_DEFAULT_TENURE_MONTHS", 12)
     EMI_DEFAULT_ANNUAL_RATE_PERCENT = _float("EMI_DEFAULT_ANNUAL_RATE_PERCENT", 14.0)
 
+    # scripts/scheduled_refresh.py's loop interval - a separate long-running
+    # process (its own docker-compose service), not something started inside
+    # the web app's gunicorn workers, so this never needs coordinating across
+    # multiple workers.
+    SCHEDULED_REFRESH_INTERVAL_SECONDS = _int("SCHEDULED_REFRESH_INTERVAL_SECONDS", 6 * 60 * 60)
+
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
     # Unset (the default) means "log to stdout" - what Docker/Render want,
     # since Render's own log viewer reads container stdout and a file

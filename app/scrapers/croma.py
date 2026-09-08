@@ -2,22 +2,29 @@
 
 Direct verification during development showed croma.com returning HTTP 403
 ("Access Denied", Akamai edge WAF - see tests/fixtures/croma_403.html for the
-real captured response body) for *every* path tried from this environment,
-including the homepage and /robots.txt itself, not just the target listing
-page. That is bot-management infrastructure making an access-control
-decision, not a robots.txt rule - per the spec's explicit instruction not to
-bypass access controls, this adapter does not attempt stealth headers,
-proxy rotation, or any other evasion to get around it.
+real captured response body) for every path tried from a typical cloud/CI
+datacenter IP, including the homepage and /robots.txt itself, not just the
+target listing page. That is bot-management infrastructure making an
+access-control decision, not a robots.txt rule - per the spec's explicit
+instruction not to bypass access controls, this adapter does not attempt
+stealth headers, proxy rotation, or any other evasion to get around it.
 
-The selectors below are written from Croma's publicly documented page
-structure/conventions but are UNVERIFIED against live markup, since no
-successful fetch was obtainable to confirm them while building this. They
-are intentionally written defensively (multiple candidate selectors, skip
-rather than crash on a miss) so that on a network where Croma is reachable
-(e.g. most residential/non-datacenter IPs) this adapter has a real chance of
-working, and on a network where it is not, it fails the way the rest of this
-system is designed to handle a source failing: gracefully, via
-SourceBlockedError, leaving the other adapters' results intact.
+Confirmed, separately, from an AWS ap-south-1 (Mumbai) host: the same
+request goes through cleanly there and returns real listings (see
+tests/fixtures/croma_listing.html, a live capture, and the README's
+"Deploying to AWS EC2" section) - so which network this runs from matters
+more than anything in this file. The selectors below were originally written
+from Croma's publicly documented page structure/conventions and were
+unverified against live markup; they're now confirmed accurate against that
+real capture (all 21 cards on the page parsed correctly - see
+tests/adapters/test_croma_adapter.py). Two real, structural gaps found
+during that verification, not selector bugs: the product image is injected
+client-side (the static HTML has no <img> tag in the card at all), and this
+listing page doesn't expose bank/offer text at the card level - only price.
+They're intentionally written defensively regardless (multiple candidate
+selectors, skip rather than crash on a miss), so this adapter fails the way
+the rest of this system is designed to handle a source failing: gracefully,
+via SourceBlockedError, leaving the other adapters' results intact.
 """
 
 from urllib.parse import urljoin

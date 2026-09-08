@@ -103,7 +103,7 @@ pip install -r requirements.txt
 pytest -v
 ```
 
-All 104 tests run fully offline (mocked HTTP via `responses`, in-memory
+All 110 tests run fully offline (mocked HTTP via `responses`, in-memory
 SQLite) — no network access or live retailer availability required. Several
 of them replay **real HTML/JSON captured live from the target sites while
 building this** (see `tests/fixtures/`), not synthetic markup.
@@ -649,14 +649,16 @@ just one query's worth:
   **1058+ real phone listings** across ~400 distinct models. A broad text
   search like this also matches non-phones (a "Smartphone Printer", a
   smartwatch) — caught during development — so results are filtered by the
-  product's actual site category (`categories.url_key == "smartphones"`),
-  not just a name-keyword guess.
+  product's actual site category (`categories.url_key == "mobiles"`), not
+  just a name-keyword guess. (Previously keyed on `"smartphones"` — see
+  [Assumptions and known limitations](#assumptions-and-known-limitations).)
 - **Reliance Digital** sweeps every collection page the live adapter
   already knows about (`app/scrapers/reliance_digital.py`'s
   `ALL_CATALOG_COLLECTION_SLUGS`) plus the generic page, de-duplicated by
   product URL.
-- **Croma** is attempted too, for completeness — expected to fail (see the
-  adapters section above), not a bug in this script.
+- **Croma** is attempted too — succeeds or fails depending on the network
+  it runs from (see [Deploying to AWS EC2](#deploying-to-aws-ec2-recommended)),
+  not a bug in this script either way.
 
 Everything found is persisted through the same matching/normalization
 pipeline `/api/search` uses, under one `CrawlRun` tagged
@@ -672,18 +674,55 @@ retailers don't carry that many distinct phone models. The goal is
 complete, respectful coverage of what each site actually exposes, not an
 arbitrary bigger number.
 
+### Running it automatically
+
+`scripts/scheduled_refresh.py` wraps the same crawl in a loop that repeats
+forever on an interval (`SCHEDULED_REFRESH_INTERVAL_SECONDS`, default 6
+hours):
+
+```bash
+python scripts/scheduled_refresh.py
+python scripts/scheduled_refresh.py --sources vijay_sales,reliance_digital
+SCHEDULED_REFRESH_INTERVAL_SECONDS=3600 python scripts/scheduled_refresh.py
+```
+
+It's its own standalone process rather than a job started from inside the
+web app's gunicorn workers — `docker-entrypoint.sh` runs `gunicorn --workers
+2`, and an in-process scheduler there would fire once per worker unless
+explicitly coordinated with a lock, a real way to accidentally ship
+duplicate crawls. A separate process sidesteps that: exactly one of these
+runs, independent of how many web workers exist, sharing nothing with them
+but the database. `docker-compose.yml` runs it as its own `scheduler`
+service alongside `web` and `db` — comment it out (or run
+`docker compose up web db`) if you only want on-demand search. One failed
+cycle (a source outage, a transient DB error) is logged and doesn't stop
+future scheduled runs — the same "one failure doesn't sink everything"
+principle every adapter follows. Covered by
+`tests/unit/test_scheduled_refresh.py`.
+
 ## Testing
 
-- **Unit** (`tests/unit/`) — normalizer, matcher, EMI math, deal score, price-drop detection.
+- **Unit** (`tests/unit/`) — normalizer, matcher, EMI math, deal score,
+  price-drop detection, `robots.py`'s allow/disallow/fetch-failure/caching
+  behavior (`test_robots.py`, 95% coverage), the full-catalogue crawl's
+  wiring against a live adapter (`test_crawl_full_catalog.py` — specifically
+  guards against the crawl script and an adapter's internal method names
+  drifting apart, since the script calls a couple of them directly rather
+  than through `adapter.search()`), and the scheduled-refresh loop's
+  repeat/failure-recovery behavior (`test_scheduled_refresh.py`).
 - **Adapters** (`tests/adapters/`) — each adapter parsed against a fixture
   file captured live from the real site while building this (see
   `tests/fixtures/`), including a test that replays Croma's actual 403 body
-  and asserts it's handled as a clean partial failure, not an exception.
+  *and* one that replays a real successful listing page (21 real cards,
+  97% coverage) — both an access-control failure and normal operation are
+  now exercised against real captured markup, not just one or the other.
 - **Integration** (`tests/integration/`) — Flask test client against every
   endpoint, with the adapter registry monkeypatched to fake adapters so
   these run deterministically offline; covers ranking/effective-price/EMI
-  correctness, one-source-failing-doesn't-break-the-search, and the search
-  cache actually skipping a second crawl.
+  correctness, real response pagination (`result_page`/`result_page_size`
+  actually slicing, the recommendation still reflecting the full result
+  set), one-source-failing-doesn't-break-the-search, and the search cache
+  actually skipping a second crawl.
 
 ## Assumptions and known limitations
 
@@ -691,13 +730,16 @@ arbitrary bigger number.
   datacenter IP (see above) — this is expected, observed, and handled, not a
   bug. Confirmed to succeed reliably from an AWS `ap-south-1` (Mumbai) host,
   returning real listings end to end — see
-  [Deploying to AWS EC2](#deploying-to-aws-ec2-recommended). The parsing
-  selectors are exercised in production from that host but still lack a
-  dedicated unit test against a captured *successful* response (only the
-  403-blocked path is covered by `tests/adapters/test_croma_adapter.py`
-  today) — capturing that fixture requires a request from a non-blocked IP,
-  which wasn't available while adding this note; adding it is the last
-  concrete item needed to close out Croma's test coverage.
+  [Deploying to AWS EC2](#deploying-to-aws-ec2-recommended). A real listing
+  page captured from that host (`tests/fixtures/croma_listing.html`) confirms
+  the parsing selectors are accurate: all 21 cards on the page parse
+  correctly, including a real discounted item. Two genuine, structural gaps
+  found from that same capture, not selector bugs: the product image is
+  injected client-side (no `<img>` tag exists in the static HTML at all),
+  and this listing page doesn't expose bank/offer text at the card level —
+  only price. `tests/adapters/test_croma_adapter.py` now covers both the
+  403-blocked path and this successful-parse path (90% coverage, up from
+  33%).
 - **Vijay Sales** previously returned zero results for every Apple/iPhone
   query, on every deployment (local and hosted alike) — this was a
   client-side category-filter bug (matching only `"smartphones"`, while
@@ -731,6 +773,12 @@ arbitrary bigger number.
   default 14%) when a source doesn't state one and the caller doesn't
   override it — clearly surfaced in the response as `emi_assumptions`, never
   presented as a scraped fact.
-- Not implemented, by choice (see the adapters section above for the
-  reasoning): Playwright/headless rendering, scheduled/Celery background
-  refresh. Both are marked optional/advanced in the spec.
+- **Playwright/headless rendering** — not implemented, by choice (see the
+  adapters section above): Croma's blocker is a WAF access-control decision,
+  not a JS-rendering gap, and none of the other two sources need a browser
+  either. Marked optional/advanced in the spec.
+- **Scheduled/background refresh** — implemented as
+  `scripts/scheduled_refresh.py`, a standalone process (its own
+  `docker-compose` service) rather than Celery/RQ, per the spec's "another
+  approach" allowance — see
+  [Full-catalogue crawl](#full-catalogue-crawl-scheduled-refresh) above.

@@ -41,5 +41,25 @@ services:
       # to stdout, which `docker compose logs` already captures - a file
       # written inside this container would vanish when it's recreated.
 
+  # Runs scripts/scheduled_refresh.py forever, on its own - the spec's
+  # "Scheduled refresh / background jobs" feature. A separate service/process
+  # rather than a job started inside `web`'s gunicorn workers, so it never
+  # needs coordinating across multiple workers (see the script's docstring).
+  # Optional: comment this service out (or `docker compose up web db`) if you
+  # only want on-demand search, not a standing background crawl.
+  scheduler:
+    build: .
+    command: python scripts/scheduled_refresh.py
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://price_intel:price_intel@db:5432/price_intel
+      HTTP_TIMEOUT_SECONDS: 12
+      HTTP_MAX_RETRIES: 3
+      RATE_LIMIT_SECONDS_PER_DOMAIN: 1.5
+      SCHEDULED_REFRESH_INTERVAL_SECONDS: 21600 # 6 hours
+      LOG_LEVEL: INFO
+
 volumes:
   postgres_data:

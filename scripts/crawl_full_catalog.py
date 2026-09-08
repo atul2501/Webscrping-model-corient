@@ -80,7 +80,7 @@ def crawl_vijay_sales(adapter: VijaySalesAdapter, crawl_id: str) -> list[RawList
                 name = item.get("name") or ""
                 if not sku or sku in seen_skus:
                     continue
-                if adapter._looks_like_accessory(name) or not adapter._is_in_smartphones_category(item):
+                if adapter._looks_like_accessory(name) or not adapter._is_in_mobiles_category(item):
                     continue
                 seen_skus.add(sku)
                 listings.append(adapter._to_listing(item))
@@ -137,6 +137,80 @@ CRAWLERS = {
 }
 
 
+def run_full_catalog_crawl(app, requested: list[str], log=print) -> dict:
+    """Runs one full-catalogue crawl across `requested` sources and persists
+    it, exactly like the CLI's `main()` used to do inline. Pulled out into
+    its own function so both `main()` (one-shot, human-readable CLI output)
+    and `scripts/scheduled_refresh.py` (a long-running loop that calls this
+    repeatedly, logging instead of printing) share one implementation rather
+    than two copies of this drifting apart. Must be called inside
+    `app.app_context()`.
+    """
+    crawl_id = uuid.uuid4().hex
+    crawl_run = CrawlRun(
+        crawl_id=crawl_id,
+        query_json=json.dumps({"mode": "full_catalog_crawl", "sources": requested}),
+        sources_attempted=len(requested),
+    )
+    db.session.add(crawl_run)
+    db.session.flush()
+
+    total_persisted = 0
+    succeeded = 0
+    notes = []
+
+    for source in requested:
+        if source not in CRAWLERS:
+            log(f"Unknown source '{source}', skipping")
+            continue
+
+        adapter_cls, crawl_fn = CRAWLERS[source]
+        log(f"=== {source} ===")
+        start = time.monotonic()
+        adapter = adapter_cls(app.config)
+        listings = crawl_fn(adapter, crawl_id)
+        elapsed = time.monotonic() - start
+        log(f"  {source}: {len(listings)} listing(s) in {elapsed:.1f}s")
+
+        # Scraping (the slow, network-bound part) is fully done before any
+        # DB write starts here, and this source's writes are one tight
+        # transaction - same reasoning as search_service._run_crawl: never
+        # hold a write transaction open across slow network I/O.
+        # Parse the whole batch up front and prefetch existing Variant
+        # rows for it in one query, instead of one exact-match query per
+        # listing - at this script's scale (hundreds of listings per
+        # source) that's the difference between hundreds of round trips
+        # and one, for every listing whose product has already been seen.
+        parsed_listings = [(raw, _parse_listing(raw)) for raw in listings]
+        variant_cache = prefetch_variants(parsed.variant_key for _, parsed in parsed_listings)
+        for raw, parsed in parsed_listings:
+            _persist_listing(raw, crawl_id, parsed=parsed, cache=variant_cache)
+        db.session.commit()
+
+        total_persisted += len(listings)
+        if listings:
+            succeeded += 1
+        notes.append(f"{source}: {len(listings)} listing(s) in {elapsed:.1f}s")
+
+    crawl_run.finished_at = datetime.now(timezone.utc)
+    crawl_run.sources_succeeded = succeeded
+    crawl_run.sources_failed = len(requested) - succeeded
+    crawl_run.notes = "; ".join(notes)
+    db.session.commit()
+
+    summary = {
+        "crawl_id": crawl_id,
+        "total_persisted": total_persisted,
+        "sources_succeeded": succeeded,
+        "sources_attempted": len(requested),
+    }
+    log(
+        f"Done. crawl_id={crawl_id}, {total_persisted} listing(s) persisted "
+        f"across {succeeded}/{len(requested)} source(s)."
+    )
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Full-catalogue crawl across all registered sources.")
     parser.add_argument("--sources", default=",".join(CRAWLERS.keys()), help="Comma-separated source names")
@@ -145,62 +219,7 @@ def main() -> None:
 
     app = create_app()
     with app.app_context():
-        crawl_id = uuid.uuid4().hex
-        crawl_run = CrawlRun(
-            crawl_id=crawl_id,
-            query_json=json.dumps({"mode": "full_catalog_crawl", "sources": requested}),
-            sources_attempted=len(requested),
-        )
-        db.session.add(crawl_run)
-        db.session.flush()
-
-        total_persisted = 0
-        succeeded = 0
-        notes = []
-
-        for source in requested:
-            if source not in CRAWLERS:
-                print(f"Unknown source '{source}', skipping")
-                continue
-
-            adapter_cls, crawl_fn = CRAWLERS[source]
-            print(f"=== {source} ===")
-            start = time.monotonic()
-            adapter = adapter_cls(app.config)
-            listings = crawl_fn(adapter, crawl_id)
-            elapsed = time.monotonic() - start
-            print(f"  {source}: {len(listings)} listing(s) in {elapsed:.1f}s\n")
-
-            # Scraping (the slow, network-bound part) is fully done before any
-            # DB write starts here, and this source's writes are one tight
-            # transaction - same reasoning as search_service._run_crawl: never
-            # hold a write transaction open across slow network I/O.
-            # Parse the whole batch up front and prefetch existing Variant
-            # rows for it in one query, instead of one exact-match query per
-            # listing - at this script's scale (hundreds of listings per
-            # source) that's the difference between hundreds of round trips
-            # and one, for every listing whose product has already been seen.
-            parsed_listings = [(raw, _parse_listing(raw)) for raw in listings]
-            variant_cache = prefetch_variants(parsed.variant_key for _, parsed in parsed_listings)
-            for raw, parsed in parsed_listings:
-                _persist_listing(raw, crawl_id, parsed=parsed, cache=variant_cache)
-            db.session.commit()
-
-            total_persisted += len(listings)
-            if listings:
-                succeeded += 1
-            notes.append(f"{source}: {len(listings)} listing(s) in {elapsed:.1f}s")
-
-        crawl_run.finished_at = datetime.now(timezone.utc)
-        crawl_run.sources_succeeded = succeeded
-        crawl_run.sources_failed = len(requested) - succeeded
-        crawl_run.notes = "; ".join(notes)
-        db.session.commit()
-
-        print(
-            f"Done. crawl_id={crawl_id}, {total_persisted} listing(s) persisted "
-            f"across {succeeded}/{len(requested)} source(s)."
-        )
+        run_full_catalog_crawl(app, requested)
 
 
 if __name__ == "__main__":
