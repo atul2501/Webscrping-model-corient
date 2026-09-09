@@ -1,14 +1,23 @@
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
+
+# IST is a fixed UTC+5:30 offset with no DST - a plain `timezone` avoids
+# depending on the OS/tzdata having the "Asia/Kolkata" zoneinfo entry
+# available (not guaranteed on a minimal python:3.12-slim image without
+# adding the `tzdata` package just for log-display cosmetics). This only
+# affects how log lines are *displayed* - scraped_at/crawl timestamps stored
+# in the database and returned by the API stay UTC, which is the correct,
+# unambiguous choice for stored/exchanged data.
+IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=IST).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
